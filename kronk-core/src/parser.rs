@@ -278,3 +278,30 @@ pub enum BinaryOperator {
     /// Division
     Div,
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        parser::{BinaryOperator, Expr, Literal},
+        tokenizer::Tokenizable,
+    };
+
+    use super::Parser;
+
+    #[test]
+    fn basic_ast_generated() {
+        let tokens = "100 + 100".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Binary {
+                op: BinaryOperator::Add,
+                left: Box::new(Expr::Literal(Literal::Number(100.0))),
+                right: Box::new(Expr::Literal(Literal::Number(100.0)))
+            }
+        )
+    }
+}
