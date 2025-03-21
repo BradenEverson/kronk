@@ -253,7 +253,24 @@ where
                 }
 
                 '"' => {
-                    todo!("Handle string litersl")
+                    let mut idx2 = idx;
+                    let mut ended = false;
+
+                    while let Some((_, c)) = peek.next() {
+                        if c != '"' {
+                            idx2 += 1;
+                            col += 1;
+                        } else {
+                            ended = true;
+                            break;
+                        }
+                    }
+
+                    if ended {
+                        Token::String(&self.as_ref()[idx + 1..=idx2])
+                    } else {
+                        return Err(TokenError::new('"', line, col));
+                    }
                 }
 
                 ch if ch.is_alphanumeric() || ch == '_' => {
@@ -381,6 +398,18 @@ mod tests {
                 Token::EOF
             ]
         );
+    }
+
+    #[test]
+    fn bad_string() {
+        let tokens = r#""hello!"#.tokenize();
+        assert!(tokens.is_err())
+    }
+
+    #[test]
+    fn string() {
+        let tokens = r#""hello!""#.tokenize().expect("Tokenize");
+        assert_eq!(tokens, [Token::String("hello!"), Token::EOF])
     }
 
     #[test]
