@@ -9,6 +9,7 @@ pub trait Tokenizable {
 }
 
 /// A token in the parsing process
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Token<'a> {
     /// An identifier
     Identifier(&'a str),
@@ -24,11 +25,18 @@ pub enum Token<'a> {
     OpenParen,
     /// )
     CloseParen,
-    /// SemiColon
+    /// Semicolon
     Semicolon,
+
+    /// =
+    Equals,
+
+    /// End of file
+    EOF,
 }
 
 /// All reserved keywords
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Keyword {
     /// Variable declaration
     Var,
@@ -51,12 +59,16 @@ impl TryFrom<&str> for Keyword {
 }
 
 /// An error during tokenization
-#[derive(Debug)]
-pub struct TokenError(char);
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TokenError(char, usize);
 
 impl Display for TokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Token `{}` is invalid :(", self.0)
+        write!(
+            f,
+            "Token: `{}` at position {} is invalid :(",
+            self.0, self.1
+        )
     }
 }
 
@@ -79,6 +91,8 @@ where
                 ')' => Token::CloseParen,
 
                 ';' => Token::Semicolon,
+
+                '=' => Token::Equals,
 
                 ws if ws.is_whitespace() => continue,
 
@@ -123,12 +137,43 @@ where
                     }
                 }
 
-                bad => return Err(TokenError(bad)),
+                bad => return Err(TokenError(bad, idx)),
             };
 
             tokens.push(next);
         }
 
+        tokens.push(Token::EOF);
+
         Ok(tokens)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::tokenizer::{Keyword, Token, TokenError};
+
+    use super::Tokenizable;
+
+    #[test]
+    fn operators_parsing() {
+        let tokens = "var pi = 3.14".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("pi"),
+                Token::Equals,
+                Token::Literal(3.14),
+                Token::EOF
+            ]
+        )
+    }
+
+    #[test]
+    fn invalid_characters() {
+        let tokens = "foo bar baz ?".tokenize();
+
+        assert_eq!(tokens, Err(TokenError('?', 12)))
     }
 }
