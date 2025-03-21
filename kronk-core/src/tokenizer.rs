@@ -34,11 +34,26 @@ pub enum Token<'a> {
     /// -
     Minus,
     /// *
-    Mul,
+    Star,
+    ///,
+    Comma,
     /// /
-    Div,
+    Slash,
     /// =
-    Equals,
+    Equal,
+    /// >=
+    GreaterEqual,
+    /// ==
+    EqualEqual,
+    /// !=
+    BangEqual,
+    /// !
+    Bang,
+    /// <
+    Less,
+    /// <=
+    LessEqual,
+
     /// End of file
     EOF,
 }
@@ -156,14 +171,14 @@ where
 
                 ';' => Token::Semicolon,
 
-                '=' => Token::Equals,
+                '=' => Token::Equal,
 
                 '+' => Token::Plus,
                 '-' => Token::Minus,
-                '*' => Token::Mul,
-                '/' => Token::Div,
+                '*' => Token::Star,
+                '/' => Token::Slash,
 
-                nl if nl == '\n' => {
+                '\n' => {
                     col = 0;
                     line += 1;
                     continue;
@@ -245,7 +260,7 @@ mod tests {
             [
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("pi"),
-                Token::Equals,
+                Token::Equal,
                 Token::Number(3.14),
                 Token::EOF
             ]
@@ -305,7 +320,7 @@ mod tests {
             [
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("varx"),
-                Token::Equals,
+                Token::Equal,
                 Token::Identifier("forx"),
                 Token::EOF
             ]
@@ -321,7 +336,7 @@ mod tests {
             tokens,
             [
                 Token::Identifier("very_long_identifier_name"),
-                Token::Equals,
+                Token::Equal,
                 Token::Number(123.0),
                 Token::EOF
             ]
@@ -336,7 +351,7 @@ mod tests {
             [
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("x"),
-                Token::Equals,
+                Token::Equal,
                 Token::Number(123.0),
                 Token::EOF
             ]
@@ -369,7 +384,7 @@ mod tests {
             [
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("x"),
-                Token::Equals,
+                Token::Equal,
                 Token::Keyword(Keyword::If),
                 Token::Identifier("y"),
                 Token::EOF
@@ -395,17 +410,17 @@ mod tests {
             tokens,
             [
                 Token::Identifier("x"),
-                Token::Equals,
+                Token::Equal,
                 Token::OpenParen,
                 Token::Identifier("a"),
                 Token::Plus,
                 Token::Identifier("b"),
                 Token::CloseParen,
-                Token::Mul,
+                Token::Star,
                 Token::Identifier("c"),
                 Token::Minus,
                 Token::Identifier("d"),
-                Token::Div,
+                Token::Slash,
                 Token::Identifier("e"),
                 Token::EOF
             ]
@@ -435,16 +450,16 @@ x = x + $;
             [
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("x"),
-                Token::Equals,
+                Token::Equal,
                 Token::Number(1.0),
                 Token::Semicolon,
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("y"),
-                Token::Equals,
+                Token::Equal,
                 Token::Number(2.0),
                 Token::Semicolon,
                 Token::Identifier("x"),
-                Token::Equals,
+                Token::Equal,
                 Token::Identifier("x"),
                 Token::Plus,
                 Token::Identifier("y"),
