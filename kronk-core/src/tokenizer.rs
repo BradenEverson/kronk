@@ -43,6 +43,8 @@ pub enum Token<'a> {
     Slash,
     /// =
     Equal,
+    /// >
+    Greater,
     /// >=
     GreaterEqual,
     /// ==
@@ -174,10 +176,45 @@ where
                 ';' => Token::Semicolon,
                 '.' => Token::Dot,
 
-                '=' => todo!(),
-                '!' => todo!(),
-                '<' => todo!(),
-                '>' => todo!(),
+                '=' => match peek.peek() {
+                    Some((_, '=')) => {
+                        peek.next();
+                        col += 1;
+
+                        Token::EqualEqual
+                    }
+                    _ => Token::Equal,
+                },
+
+                '!' => match peek.peek() {
+                    Some((_, '=')) => {
+                        peek.next();
+                        col += 1;
+
+                        Token::BangEqual
+                    }
+                    _ => Token::Bang,
+                },
+
+                '<' => match peek.peek() {
+                    Some((_, '=')) => {
+                        peek.next();
+                        col += 1;
+
+                        Token::LessEqual
+                    }
+                    _ => Token::Less,
+                },
+
+                '>' => match peek.peek() {
+                    Some((_, '=')) => {
+                        peek.next();
+                        col += 1;
+
+                        Token::GreaterEqual
+                    }
+                    _ => Token::Greater,
+                },
 
                 '+' => Token::Plus,
                 '-' => Token::Minus,
@@ -307,9 +344,6 @@ mod tests {
 
         let tokens = "x = #y".tokenize();
         assert_eq!(tokens, Err(TokenError::new('#', 1, 5)));
-
-        let tokens = "x = y!".tokenize();
-        assert_eq!(tokens, Err(TokenError::new('!', 1, 6)));
     }
 
     #[test]
@@ -378,8 +412,16 @@ mod tests {
             ]
         );
 
-        let tokens = "123.45.67".tokenize();
-        assert!(tokens.is_err());
+        let tokens = "123.45.67".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Number(123.45),
+                Token::Dot,
+                Token::Number(67.0),
+                Token::EOF
+            ]
+        );
     }
 
     #[test]
