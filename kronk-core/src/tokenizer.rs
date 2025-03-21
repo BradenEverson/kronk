@@ -69,14 +69,28 @@ impl TryFrom<&str> for Keyword {
 
 /// An error during tokenization
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TokenError(char, usize);
+pub struct TokenError {
+    /// The invalid token
+    token: char,
+    /// The line that is invalid
+    line: usize,
+    /// The column in that line that's invalid
+    col: usize,
+}
+
+impl TokenError {
+    /// Creates a new token error with context
+    pub fn new(token: char, line: usize, col: usize) -> Self {
+        Self { token, line, col }
+    }
+}
 
 impl Display for TokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Token: `{}` at position {} is invalid :(",
-            self.0, self.1
+            "Invalid token {} at line {}, col {}",
+            self.token, self.line, self.col
         )
     }
 }
@@ -90,8 +104,11 @@ where
     fn tokenize(&self) -> Result<Vec<Token<'_>>, TokenError> {
         let mut peek = self.as_ref().chars().enumerate().peekable();
         let mut tokens = vec![];
+        let mut line = 1;
+        let mut col = 0;
 
         while let Some((idx, tok)) = peek.next() {
+            col += 1;
             let next = match tok {
                 '{' => Token::OpenBrace,
                 '}' => Token::CloseBrace,
@@ -108,6 +125,12 @@ where
                 '*' => Token::Mul,
                 '/' => Token::Div,
 
+                nl if nl == '\n' => {
+                    col = 0;
+                    line += 1;
+                    continue;
+                }
+
                 ws if ws.is_whitespace() => continue,
 
                 num if num.is_numeric() => {
@@ -117,8 +140,10 @@ where
                     let mut dot = false;
                     while let Some((_, next)) = peek.peek() {
                         if next.is_numeric() {
+                            col += 1;
                             curr.push(peek.next().unwrap().1);
                         } else if *next == '.' && !dot {
+                            col += 1;
                             curr.push(peek.next().unwrap().1);
                             dot = true;
                         } else {
@@ -140,6 +165,7 @@ where
                         }
 
                         end = *idx2;
+                        col += 1;
                         peek.next();
                     }
 
@@ -151,7 +177,7 @@ where
                     }
                 }
 
-                bad => return Err(TokenError(bad, idx)),
+                bad => return Err(TokenError::new(bad, line, col)),
             };
 
             tokens.push(next);
@@ -188,7 +214,7 @@ mod tests {
     fn invalid_characters() {
         let tokens = "foo bar baz ?".tokenize();
 
-        assert_eq!(tokens, Err(TokenError('?', 12)))
+        assert_eq!(tokens, Err(TokenError::new('?', 1, 13)))
     }
 
     #[test]
@@ -214,13 +240,13 @@ mod tests {
     #[test]
     fn invalid_tokens() {
         let tokens = "x = @".tokenize();
-        assert_eq!(tokens, Err(TokenError('@', 4)));
+        assert_eq!(tokens, Err(TokenError::new('@', 1, 5)));
 
         let tokens = "x = #y".tokenize();
-        assert_eq!(tokens, Err(TokenError('#', 4)));
+        assert_eq!(tokens, Err(TokenError::new('#', 1, 5)));
 
         let tokens = "x = y!".tokenize();
-        assert_eq!(tokens, Err(TokenError('!', 5)));
+        assert_eq!(tokens, Err(TokenError::new('!', 1, 6)));
     }
 
     #[test]
