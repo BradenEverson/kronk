@@ -49,7 +49,7 @@ pub enum Token<'a> {
 pub enum Keyword {
     /// Variable declaration
     Var,
-    /// For loop instantiation
+    /// For loop
     For,
     /// If statement
     If,
