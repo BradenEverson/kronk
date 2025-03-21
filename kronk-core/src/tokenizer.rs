@@ -28,6 +28,15 @@ pub enum Token<'a> {
     /// Semicolon
     Semicolon,
 
+    /// +
+    Plus,
+    /// -
+    Minus,
+    /// *
+    Mul,
+    /// /
+    Div,
+
     /// =
     Equals,
 
@@ -93,6 +102,11 @@ where
                 ';' => Token::Semicolon,
 
                 '=' => Token::Equals,
+
+                '+' => Token::Plus,
+                '-' => Token::Minus,
+                '*' => Token::Mul,
+                '/' => Token::Div,
 
                 ws if ws.is_whitespace() => continue,
 
