@@ -14,7 +14,9 @@ pub enum Token<'a> {
     /// An identifier
     Identifier(&'a str),
     /// A numeric literal
-    Literal(f64),
+    Number(f64),
+    /// A string literal
+    String(&'a str),
     /// A keyword
     Keyword(Keyword),
     /// {
@@ -27,7 +29,6 @@ pub enum Token<'a> {
     CloseParen,
     /// Semicolon
     Semicolon,
-
     /// +
     Plus,
     /// -
@@ -36,10 +37,8 @@ pub enum Token<'a> {
     Mul,
     /// /
     Div,
-
     /// =
     Equals,
-
     /// End of file
     EOF,
 }
@@ -47,21 +46,60 @@ pub enum Token<'a> {
 /// All reserved keywords
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Keyword {
-    /// Variable declaration
-    Var,
-    /// For loop
+    /// and
+    And,
+    /// class
+    Class,
+    /// else
+    Else,
+    /// false
+    False,
+    /// fun
+    Fun,
+    /// for
     For,
-    /// If statement
+    /// if
     If,
+    /// nil
+    Nil,
+    /// or
+    Or,
+    /// print
+    Print,
+    /// return
+    Return,
+    /// super
+    Super,
+    /// this
+    This,
+    /// true
+    True,
+    /// var
+    Var,
+    /// while
+    While,
 }
 
 impl TryFrom<&str> for Keyword {
     type Error = ();
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "var" => Ok(Self::Var),
+            "and" => Ok(Self::And),
+            "class" => Ok(Self::Class),
+            "else" => Ok(Self::Else),
+            "false" => Ok(Self::False),
+            "fun" => Ok(Self::Fun),
             "for" => Ok(Self::For),
             "if" => Ok(Self::If),
+            "nil" => Ok(Self::Nil),
+            "or" => Ok(Self::Or),
+            "print" => Ok(Self::Print),
+            "return" => Ok(Self::Return),
+            "super" => Ok(Self::Super),
+            "this" => Ok(Self::This),
+            "true" => Ok(Self::True),
+            "var" => Ok(Self::Var),
+            "while" => Ok(Self::While),
             _ => Err(()),
         }
     }
@@ -153,7 +191,11 @@ where
 
                     // Unwrap safety, as we build the number we are ensuring that only numeric
                     // characters are added to it, this cannot fail
-                    Token::Literal(curr.parse().unwrap())
+                    Token::Number(curr.parse().unwrap())
+                }
+
+                '"' => {
+                    todo!("Handle string litersl")
                 }
 
                 ch if ch.is_alphanumeric() => {
@@ -204,7 +246,7 @@ mod tests {
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("pi"),
                 Token::Equals,
-                Token::Literal(3.14),
+                Token::Number(3.14),
                 Token::EOF
             ]
         )
@@ -280,7 +322,7 @@ mod tests {
             [
                 Token::Identifier("very_long_identifier_name"),
                 Token::Equals,
-                Token::Literal(123.0),
+                Token::Number(123.0),
                 Token::EOF
             ]
         );
@@ -295,7 +337,7 @@ mod tests {
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("x"),
                 Token::Equals,
-                Token::Literal(123.0),
+                Token::Number(123.0),
                 Token::EOF
             ]
         );
@@ -307,10 +349,10 @@ mod tests {
         assert_eq!(
             tokens,
             [
-                Token::Literal(123.0),
-                Token::Literal(45.67),
-                Token::Literal(0.123),
-                Token::Literal(123.0),
+                Token::Number(123.0),
+                Token::Number(45.67),
+                Token::Number(0.123),
+                Token::Number(123.0),
                 Token::EOF
             ]
         );
@@ -394,12 +436,12 @@ x = x + $;
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("x"),
                 Token::Equals,
-                Token::Literal(1.0),
+                Token::Number(1.0),
                 Token::Semicolon,
                 Token::Keyword(Keyword::Var),
                 Token::Identifier("y"),
                 Token::Equals,
-                Token::Literal(2.0),
+                Token::Number(2.0),
                 Token::Semicolon,
                 Token::Identifier("x"),
                 Token::Equals,
