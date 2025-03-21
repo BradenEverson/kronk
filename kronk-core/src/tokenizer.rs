@@ -256,11 +256,11 @@ where
                     todo!("Handle string litersl")
                 }
 
-                ch if ch.is_alphanumeric() => {
+                ch if ch.is_alphanumeric() || ch == '_' => {
                     let mut end = idx;
 
                     while let Some((idx2, next)) = peek.peek() {
-                        if !(next.is_alphabetic() || *next == '_') {
+                        if !(next.is_alphanumeric() || *next == '_') {
                             break;
                         }
 
@@ -512,6 +512,38 @@ x = x + $;
                 Token::Plus,
                 Token::Identifier("y"),
                 Token::Semicolon,
+                Token::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn edge_cases_for_identifiers() {
+        let tokens = "_underscore".tokenize().expect("Tokenize");
+        assert_eq!(tokens, [Token::Identifier("_underscore"), Token::EOF]);
+
+        let tokens = "var1".tokenize().expect("Tokenize");
+        assert_eq!(tokens, [Token::Identifier("var1"), Token::EOF]);
+
+        let tokens = "var_1".tokenize().expect("Tokenize");
+        assert_eq!(tokens, [Token::Identifier("var_1"), Token::EOF]);
+    }
+
+    #[test]
+    fn edge_cases_for_numbers() {
+        let tokens = "0123".tokenize().expect("Tokenize");
+        assert_eq!(tokens, [Token::Number(123.0), Token::EOF]);
+
+        let tokens = "123.".tokenize().expect("Tokenize");
+        assert_eq!(tokens, [Token::Number(123.0), Token::EOF]);
+
+        let tokens = "123..456".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Number(123.0),
+                Token::Dot,
+                Token::Number(456.0),
                 Token::EOF
             ]
         );
