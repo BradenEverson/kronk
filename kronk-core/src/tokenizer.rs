@@ -371,6 +371,16 @@ mod tests {
     }
 
     #[test]
+    fn multiple_lines_error() {
+        let input = r#"var x = 1;
+var y = 2;
+x = x + $;
+    "#;
+        let tokens = input.tokenize();
+        assert_eq!(tokens, Err(TokenError::new('$', 3, 9)));
+    }
+
+    #[test]
     fn multiple_lines() {
         let input = r#"
         var x = 1;
