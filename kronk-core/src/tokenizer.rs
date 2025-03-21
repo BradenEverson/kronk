@@ -2,7 +2,7 @@
 
 use std::{error::Error, fmt::Display};
 
-/// A data type that can be tokenized
+/// A datatype that can be tokenized
 pub trait Tokenizable {
     /// Tokenize to a token stream
     fn tokenize(&self) -> Result<Vec<Token<'_>>, TokenError>;
