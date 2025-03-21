@@ -27,7 +27,7 @@ pub enum Token<'a> {
     OpenParen,
     /// )
     CloseParen,
-    /// Semicolon
+    /// ;
     Semicolon,
     /// +
     Plus,
@@ -37,6 +37,8 @@ pub enum Token<'a> {
     Star,
     ///,
     Comma,
+    /// .
+    Dot,
     /// /
     Slash,
     /// =
@@ -170,8 +172,12 @@ where
                 ')' => Token::CloseParen,
 
                 ';' => Token::Semicolon,
+                '.' => Token::Dot,
 
-                '=' => Token::Equal,
+                '=' => todo!(),
+                '!' => todo!(),
+                '<' => todo!(),
+                '>' => todo!(),
 
                 '+' => Token::Plus,
                 '-' => Token::Minus,
