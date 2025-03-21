@@ -548,4 +548,87 @@ x = x + $;
             ]
         );
     }
+
+    #[test]
+    fn edge_cases_for_operators() {
+        let tokens = "x = y + -z".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Identifier("x"),
+                Token::Equal,
+                Token::Identifier("y"),
+                Token::Plus,
+                Token::Minus,
+                Token::Identifier("z"),
+                Token::EOF
+            ]
+        );
+
+        let tokens = "x = y * / z".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Identifier("x"),
+                Token::Equal,
+                Token::Identifier("y"),
+                Token::Star,
+                Token::Slash,
+                Token::Identifier("z"),
+                Token::EOF
+            ]
+        );
+
+        let tokens = "x = y == z".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Identifier("x"),
+                Token::Equal,
+                Token::Identifier("y"),
+                Token::EqualEqual,
+                Token::Identifier("z"),
+                Token::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn edge_cases_for_whitespace() {
+        let tokens = "   var   x   =   123   ".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("x"),
+                Token::Equal,
+                Token::Number(123.0),
+                Token::EOF
+            ]
+        );
+
+        let tokens = "\tvar\tx\t=\t123\t".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("x"),
+                Token::Equal,
+                Token::Number(123.0),
+                Token::EOF
+            ]
+        );
+
+        let tokens = "\nvar\nx\n=\n123\n".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("x"),
+                Token::Equal,
+                Token::Number(123.0),
+                Token::EOF
+            ]
+        );
+    }
 }
