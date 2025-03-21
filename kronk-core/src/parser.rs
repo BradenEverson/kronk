@@ -2,7 +2,7 @@
 
 use std::{error::Error, fmt::Display};
 
-use crate::tokenizer::Token;
+use crate::tokenizer::{Keyword, Token};
 
 /// A parser holding context
 pub struct Parser<'a> {
@@ -57,7 +57,11 @@ impl<'a> Parser<'a> {
             self.idx += 1
         }
 
-        self.tokens[self.idx - 1]
+        if self.idx == 0 {
+            self.tokens[0]
+        } else {
+            self.tokens[self.idx - 1]
+        }
     }
 
     /// Parses the current token stream
@@ -190,9 +194,9 @@ impl<'a> Parser<'a> {
     fn primary(&mut self) -> Result<Expr<'a>, ParseError> {
         match self.advance() {
             Token::Number(n) => Ok(Expr::Literal(Literal::Number(n))),
-            Token::String("true") => Ok(Expr::Literal(Literal::True)),
-            Token::String("false") => Ok(Expr::Literal(Literal::True)),
-            Token::String("nil") => Ok(Expr::Literal(Literal::Nil)),
+            Token::Keyword(Keyword::True) => Ok(Expr::Literal(Literal::True)),
+            Token::Keyword(Keyword::False) => Ok(Expr::Literal(Literal::False)),
+            Token::Keyword(Keyword::Nil) => Ok(Expr::Literal(Literal::Nil)),
             Token::String(s) => Ok(Expr::Literal(Literal::String(s))),
             Token::OpenParen => {
                 let expr = self.expression()?;
@@ -282,11 +286,9 @@ pub enum BinaryOperator {
 #[cfg(test)]
 mod tests {
     use crate::{
-        parser::{BinaryOperator, Expr, Literal},
+        parser::{BinaryOperator, Expr, Literal, Parser, UnaryOperator},
         tokenizer::Tokenizable,
     };
-
-    use super::Parser;
 
     #[test]
     fn basic_ast_generated() {
@@ -303,5 +305,235 @@ mod tests {
                 right: Box::new(Expr::Literal(Literal::Number(100.0)))
             }
         )
+    }
+
+    #[test]
+    fn test_literal_number() {
+        let tokens = "42".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(ast, Expr::Literal(Literal::Number(42.0)));
+    }
+
+    #[test]
+    fn test_literal_string() {
+        let tokens = "\"hello\"".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(ast, Expr::Literal(Literal::String("hello")));
+    }
+
+    #[test]
+    fn test_literal_true() {
+        let tokens = "true".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(ast, Expr::Literal(Literal::True));
+    }
+
+    #[test]
+    fn test_literal_false() {
+        let tokens = "false".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(ast, Expr::Literal(Literal::False));
+    }
+
+    #[test]
+    fn test_literal_nil() {
+        let tokens = "nil".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(ast, Expr::Literal(Literal::Nil));
+    }
+
+    #[test]
+    fn test_unary_negation() {
+        let tokens = "-42".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Unary {
+                op: UnaryOperator::Neg,
+                node: Box::new(Expr::Literal(Literal::Number(42.0))),
+            }
+        );
+    }
+
+    #[test]
+    fn test_unary_not() {
+        let tokens = "!true".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Unary {
+                op: UnaryOperator::Not,
+                node: Box::new(Expr::Literal(Literal::True)),
+            }
+        );
+    }
+
+    #[test]
+    fn test_binary_addition() {
+        let tokens = "100 + 200".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Binary {
+                op: BinaryOperator::Add,
+                left: Box::new(Expr::Literal(Literal::Number(100.0))),
+                right: Box::new(Expr::Literal(Literal::Number(200.0))),
+            }
+        );
+    }
+
+    #[test]
+    fn test_binary_multiplication() {
+        let tokens = "3 * 4".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Binary {
+                op: BinaryOperator::Mul,
+                left: Box::new(Expr::Literal(Literal::Number(3.0))),
+                right: Box::new(Expr::Literal(Literal::Number(4.0))),
+            }
+        );
+    }
+
+    #[test]
+    fn test_binary_equality() {
+        let tokens = "true == false".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Binary {
+                op: BinaryOperator::Eq,
+                left: Box::new(Expr::Literal(Literal::True)),
+                right: Box::new(Expr::Literal(Literal::False)),
+            }
+        );
+    }
+
+    #[test]
+    fn test_binary_inequality() {
+        let tokens = "true != false".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Binary {
+                op: BinaryOperator::Neq,
+                left: Box::new(Expr::Literal(Literal::True)),
+                right: Box::new(Expr::Literal(Literal::False)),
+            }
+        );
+    }
+
+    #[test]
+    fn test_grouping() {
+        let tokens = "(42 + 10) * 2".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Binary {
+                op: BinaryOperator::Mul,
+                left: Box::new(Expr::Grouping(Box::new(Expr::Binary {
+                    op: BinaryOperator::Add,
+                    left: Box::new(Expr::Literal(Literal::Number(42.0))),
+                    right: Box::new(Expr::Literal(Literal::Number(10.0))),
+                }))),
+                right: Box::new(Expr::Literal(Literal::Number(2.0))),
+            }
+        );
+    }
+
+    #[test]
+    fn test_complex_expression() {
+        let tokens = "(3 + 5) * (10 - 2) / 4".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Binary {
+                op: BinaryOperator::Div,
+                left: Box::new(Expr::Binary {
+                    op: BinaryOperator::Mul,
+                    left: Box::new(Expr::Grouping(Box::new(Expr::Binary {
+                        op: BinaryOperator::Add,
+                        left: Box::new(Expr::Literal(Literal::Number(3.0))),
+                        right: Box::new(Expr::Literal(Literal::Number(5.0))),
+                    }))),
+                    right: Box::new(Expr::Grouping(Box::new(Expr::Binary {
+                        op: BinaryOperator::Sub,
+                        left: Box::new(Expr::Literal(Literal::Number(10.0))),
+                        right: Box::new(Expr::Literal(Literal::Number(2.0))),
+                    }))),
+                }),
+                right: Box::new(Expr::Literal(Literal::Number(4.0))),
+            }
+        );
+    }
+
+    #[test]
+    fn test_invalid_expression() {
+        let tokens = "42 +".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let result = parser.parse();
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_unexpected_token() {
+        let tokens = "+ 42".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let result = parser.parse();
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_empty_input() {
+        let tokens = "".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let result = parser.parse();
+
+        assert!(result.is_err());
     }
 }
