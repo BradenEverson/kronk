@@ -135,7 +135,7 @@ where
                     let mut end = idx;
 
                     while let Some((idx2, next)) = peek.peek() {
-                        if !next.is_alphabetic() {
+                        if !(next.is_alphabetic() || *next == '_') {
                             break;
                         }
 
@@ -189,5 +189,190 @@ mod tests {
         let tokens = "foo bar baz ?".tokenize();
 
         assert_eq!(tokens, Err(TokenError('?', 12)))
+    }
+
+    #[test]
+    fn parentheses_and_braces() {
+        let tokens = "(x + y) { z; }".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::OpenParen,
+                Token::Identifier("x"),
+                Token::Plus,
+                Token::Identifier("y"),
+                Token::CloseParen,
+                Token::OpenBrace,
+                Token::Identifier("z"),
+                Token::Semicolon,
+                Token::CloseBrace,
+                Token::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn invalid_tokens() {
+        let tokens = "x = @".tokenize();
+        assert_eq!(tokens, Err(TokenError('@', 4)));
+
+        let tokens = "x = #y".tokenize();
+        assert_eq!(tokens, Err(TokenError('#', 4)));
+
+        let tokens = "x = y!".tokenize();
+        assert_eq!(tokens, Err(TokenError('!', 5)));
+    }
+
+    #[test]
+    fn empty_input() {
+        let tokens = "".tokenize().expect("Tokenize");
+        assert_eq!(tokens, [Token::EOF]);
+    }
+
+    #[test]
+    fn keywords_as_identifiers() {
+        let tokens = "var varx = forx".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("varx"),
+                Token::Equals,
+                Token::Identifier("forx"),
+                Token::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn long_identifiers() {
+        let tokens = "very_long_identifier_name = 123"
+            .tokenize()
+            .expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Identifier("very_long_identifier_name"),
+                Token::Equals,
+                Token::Literal(123.0),
+                Token::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn whitespace_handling() {
+        let tokens = "  var   x  =  123  ".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("x"),
+                Token::Equals,
+                Token::Literal(123.0),
+                Token::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn numeric_literals() {
+        let tokens = "123 45.67 0.123 123.".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Literal(123.0),
+                Token::Literal(45.67),
+                Token::Literal(0.123),
+                Token::Literal(123.0),
+                Token::EOF
+            ]
+        );
+
+        let tokens = "123.45.67".tokenize();
+        assert!(tokens.is_err());
+    }
+
+    #[test]
+    fn identifiers_and_keywords() {
+        let tokens = "var x = if y".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("x"),
+                Token::Equals,
+                Token::Keyword(Keyword::If),
+                Token::Identifier("y"),
+                Token::EOF
+            ]
+        );
+
+        let tokens = "for var ifelse".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Keyword(Keyword::For),
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("ifelse"),
+                Token::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn arithmetic_expressions() {
+        let tokens = "x = (a + b) * c - d / e".tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Identifier("x"),
+                Token::Equals,
+                Token::OpenParen,
+                Token::Identifier("a"),
+                Token::Plus,
+                Token::Identifier("b"),
+                Token::CloseParen,
+                Token::Mul,
+                Token::Identifier("c"),
+                Token::Minus,
+                Token::Identifier("d"),
+                Token::Div,
+                Token::Identifier("e"),
+                Token::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn multiple_lines() {
+        let input = r#"
+        var x = 1;
+        var y = 2;
+        x = x + y;
+    "#;
+        let tokens = input.tokenize().expect("Tokenize");
+        assert_eq!(
+            tokens,
+            [
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("x"),
+                Token::Equals,
+                Token::Literal(1.0),
+                Token::Semicolon,
+                Token::Keyword(Keyword::Var),
+                Token::Identifier("y"),
+                Token::Equals,
+                Token::Literal(2.0),
+                Token::Semicolon,
+                Token::Identifier("x"),
+                Token::Equals,
+                Token::Identifier("x"),
+                Token::Plus,
+                Token::Identifier("y"),
+                Token::Semicolon,
+                Token::EOF
+            ]
+        );
     }
 }
