@@ -2,7 +2,10 @@
 
 use std::{error::Error, fmt::Display};
 
-use crate::tokenizer::{Keyword, Token};
+use crate::{
+    eval::RuntimeError,
+    tokenizer::{Keyword, Token},
+};
 
 /// A parser holding context
 pub struct Parser<'a> {
@@ -235,12 +238,14 @@ pub enum Expr<'a> {
 }
 
 /// A literal value
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal<'a> {
     /// A number
     Number(f64),
     /// A string
     String(&'a str),
+    /// Concatenated strings
+    Concat(Box<Literal<'a>>, Box<Literal<'a>>),
     /// Boolean true
     True,
     /// Boolean false
@@ -257,6 +262,7 @@ impl<'a> Display for Literal<'a> {
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
             Self::Nil => write!(f, "nil"),
+            Self::Concat(a, b) => write!(f, "{a}{b}"),
         }
     }
 }
