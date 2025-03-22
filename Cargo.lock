@@ -3,5 +3,9 @@
 version = 4
 
 [[package]]
+name = "kronk"
+version = "0.1.0"
+
+[[package]]
 name = "kronk-core"
 version = "0.1.0"

@@ -1,5 +1,5 @@
 [workspace]
-members =  ["kronk-core"]
+members =  [ "kronk","kronk-core"]
 resolver = "2"
 
 [workspace.package]
