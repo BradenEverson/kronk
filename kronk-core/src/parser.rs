@@ -235,7 +235,7 @@ pub enum Expr<'a> {
 }
 
 /// A literal value
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Literal<'a> {
     /// A number
     Number(f64),
@@ -249,6 +249,8 @@ pub enum Literal<'a> {
     False,
     /// NULL
     Nil,
+    /// A void return
+    Void,
 }
 
 impl Display for Literal<'_> {
@@ -260,6 +262,7 @@ impl Display for Literal<'_> {
             Self::False => write!(f, "false"),
             Self::Nil => write!(f, "nil"),
             Self::Concat(a, b) => write!(f, "{a}{b}"),
+            Self::Void => write!(f, ""),
         }
     }
 }

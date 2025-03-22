@@ -48,6 +48,9 @@ impl BinaryOperator {
             Self::Sub => left - right,
             Self::Mul => left * right,
             Self::Div => left / right,
+            Self::Eq => left.equals(&right),
+            Self::Neq => left.not_equals(&right),
+
             op => todo!("Implement op {op:?}"),
         }
     }
@@ -113,6 +116,50 @@ impl Div for Literal<'_> {
     fn div(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::Number(n1), Self::Number(n2)) => Ok(Self::Number(n1 / n2)),
+
+            _ => Err(RuntimeError),
+        }
+    }
+}
+
+impl<'a> Literal<'a> {
+    /// Returns the True literal if the two literals are losely equal
+    pub fn equals(&self, other: &Self) -> Result<Literal<'a>, RuntimeError> {
+        match (self, other) {
+            (Self::Number(n1), Self::Number(n2)) => {
+                Ok(if n1 == n2 { Self::True } else { Self::False })
+            }
+            (Self::True, Self::True) => Ok(Self::True),
+            (Self::False, Self::False) => Ok(Self::True),
+
+            (Self::False, Self::True) => Ok(Self::False),
+            (Self::True, Self::False) => Ok(Self::False),
+
+            (Self::Void, Self::Void) => Ok(Self::True),
+
+            (crazy1, crazy2) if crazy1.to_string() == crazy2.to_string() => Ok(Self::True),
+            (crazy1, crazy2) if crazy1.to_string() != crazy2.to_string() => Ok(Self::False),
+
+            _ => Err(RuntimeError),
+        }
+    }
+
+    /// Returns the True literal if the two literals are not losely equal
+    pub fn not_equals(&self, other: &Self) -> Result<Literal<'a>, RuntimeError> {
+        match (self, other) {
+            (Self::Number(n1), Self::Number(n2)) => {
+                Ok(if n1 == n2 { Self::True } else { Self::True })
+            }
+            (Self::True, Self::True) => Ok(Self::False),
+            (Self::False, Self::False) => Ok(Self::False),
+
+            (Self::False, Self::True) => Ok(Self::True),
+            (Self::True, Self::False) => Ok(Self::True),
+
+            (Self::Void, Self::Void) => Ok(Self::False),
+
+            (crazy1, crazy2) if crazy1.to_string() == crazy2.to_string() => Ok(Self::False),
+            (crazy1, crazy2) if crazy1.to_string() != crazy2.to_string() => Ok(Self::True),
 
             _ => Err(RuntimeError),
         }
@@ -187,6 +234,36 @@ mod tests {
         let result = eval.eval(ast).expect("Eval").to_string();
 
         assert_eq!(result, "1020");
+    }
+
+    #[test]
+    fn loose_equality() {
+        let tokens = r#"1 == "1""#.tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut eval = Interpretter::default();
+        assert_eq!(eval.eval(ast).expect("Eval"), Literal::True)
+    }
+
+    #[test]
+    fn pure_inequality() {
+        let tokens = "1 + 1 != 100 * 10".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut eval = Interpretter::default();
+        assert_eq!(eval.eval(ast).expect("Eval"), Literal::True)
+    }
+
+    #[test]
+    fn pure_equality() {
+        let tokens = "1 + 1 == 2".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut eval = Interpretter::default();
+        assert_eq!(eval.eval(ast).expect("Eval"), Literal::True)
     }
 
     #[test]
