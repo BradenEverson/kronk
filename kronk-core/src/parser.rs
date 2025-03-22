@@ -249,6 +249,18 @@ pub enum Literal<'a> {
     Nil,
 }
 
+impl<'a> Display for Literal<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Number(n) => write!(f, "{n}"),
+            Self::String(s) => write!(f, "\"{s}\""),
+            Self::True => write!(f, "true"),
+            Self::False => write!(f, "false"),
+            Self::Nil => write!(f, "nil"),
+        }
+    }
+}
+
 /// An unary operator
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum UnaryOperator {

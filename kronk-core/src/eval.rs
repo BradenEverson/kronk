@@ -1,6 +1,6 @@
 //! Interpretter
 
-use std::fmt::Display;
+use std::{error::Error, fmt::Display};
 
 use crate::parser::{BinaryOperator, Expr, Literal, UnaryOperator};
 
@@ -8,9 +8,27 @@ use crate::parser::{BinaryOperator, Expr, Literal, UnaryOperator};
 #[derive(Debug, Default, Clone)]
 pub struct Interpretter {}
 
+/// An error during execution
+#[derive(Debug, Clone, Copy)]
+pub struct RuntimeError;
+
+impl Display for RuntimeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Runtime Error Occured :(")
+    }
+}
+
+impl Error for RuntimeError {}
+
 impl Interpretter {
     /// Interprets an AST
-    pub fn eval(&mut self, ast: Expr<'_>) {}
+    pub fn eval<'a>(&mut self, ast: &Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
+        match ast {
+            Expr::Literal(l) => Ok(*l),
+            Expr::Grouping(inner) => self.eval(inner),
+            _ => todo!(),
+        }
+    }
 }
 
 impl<'a> Display for Expr<'a> {
@@ -35,18 +53,6 @@ impl<'a> Display for Expr<'a> {
                 BinaryOperator::Lte => write!(f, "{left} <= {right}"),
             },
             Self::Grouping(e) => write!(f, "({e})"),
-        }
-    }
-}
-
-impl<'a> Display for Literal<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Number(n) => write!(f, "{n}"),
-            Self::String(s) => write!(f, "{s}"),
-            Self::True => write!(f, "true"),
-            Self::False => write!(f, "false"),
-            Self::Nil => write!(f, "nil"),
         }
     }
 }
