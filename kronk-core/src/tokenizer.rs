@@ -256,7 +256,7 @@ where
                     let mut idx2 = idx;
                     let mut ended = false;
 
-                    while let Some((_, c)) = peek.next() {
+                    for (_, c) in peek.by_ref() {
                         if c != '"' {
                             idx2 += 1;
                             col += 1;

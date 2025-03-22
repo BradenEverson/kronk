@@ -6,7 +6,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use crate::parser::{BinaryOperator, Expr, Literal, ParseError, UnaryOperator};
+use crate::parser::{BinaryOperator, Expr, Literal, UnaryOperator};
 
 /// An AST interpretter
 #[derive(Debug, Default, Clone)]
@@ -60,7 +60,7 @@ impl UnaryOperator {
     }
 }
 
-impl<'a> Add for Literal<'a> {
+impl Add for Literal<'_> {
     type Output = Result<Self, RuntimeError>;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -86,7 +86,7 @@ impl<'a> Add for Literal<'a> {
     }
 }
 
-impl<'a> Sub for Literal<'a> {
+impl Sub for Literal<'_> {
     type Output = Result<Self, RuntimeError>;
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
@@ -97,7 +97,7 @@ impl<'a> Sub for Literal<'a> {
     }
 }
 
-impl<'a> Mul for Literal<'a> {
+impl Mul for Literal<'_> {
     type Output = Result<Self, RuntimeError>;
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
@@ -108,7 +108,7 @@ impl<'a> Mul for Literal<'a> {
     }
 }
 
-impl<'a> Div for Literal<'a> {
+impl Div for Literal<'_> {
     type Output = Result<Self, RuntimeError>;
     fn div(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
@@ -119,7 +119,7 @@ impl<'a> Div for Literal<'a> {
     }
 }
 
-impl<'a> Display for Expr<'a> {
+impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Literal(l) => write!(f, "{l}"),
@@ -142,5 +142,62 @@ impl<'a> Display for Expr<'a> {
             },
             Self::Grouping(e) => write!(f, "({e})"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        parser::{Literal, Parser},
+        tokenizer::Tokenizable,
+    };
+
+    use super::Interpretter;
+
+    #[test]
+    fn eval_addition() {
+        let tokens = "100 + 100".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut eval = Interpretter::default();
+
+        assert_eq!(eval.eval(ast).expect("Evaluate"), Literal::Number(200.0))
+    }
+
+    #[test]
+    fn eval_string_concat() {
+        let tokens = r#""100" + 100"#.tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut eval = Interpretter::default();
+        let result = eval.eval(ast).expect("Eval").to_string();
+
+        assert_eq!(result, "100100");
+    }
+
+    #[test]
+    fn eval_string_concat_otherway() {
+        let tokens = r#"10 + "20""#.tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut eval = Interpretter::default();
+        let result = eval.eval(ast).expect("Eval").to_string();
+
+        assert_eq!(result, "1020");
+    }
+
+    #[test]
+    fn eval_pure_string_concat() {
+        let tokens = r#""Hello " + "World!""#.tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut eval = Interpretter::default();
+        let result = eval.eval(ast).expect("Eval").to_string();
+
+        assert_eq!(result, "Hello World!");
     }
 }

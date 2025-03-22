@@ -2,10 +2,7 @@
 
 use std::{error::Error, fmt::Display};
 
-use crate::{
-    eval::RuntimeError,
-    tokenizer::{Keyword, Token},
-};
+use crate::tokenizer::{Keyword, Token};
 
 /// A parser holding context
 pub struct Parser<'a> {
@@ -254,11 +251,11 @@ pub enum Literal<'a> {
     Nil,
 }
 
-impl<'a> Display for Literal<'a> {
+impl Display for Literal<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Number(n) => write!(f, "{n}"),
-            Self::String(s) => write!(f, "\"{s}\""),
+            Self::String(s) => write!(f, "{s}"),
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
             Self::Nil => write!(f, "nil"),
