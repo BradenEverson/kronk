@@ -216,6 +216,18 @@ mod tests {
     use super::Interpretter;
 
     #[test]
+    fn simple_eval() {
+        let tokens = "var foo = 100".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut interp = Interpretter::default();
+        interp.eval(ast).expect("Interpret result");
+
+        assert_eq!(interp.context["foo"], Literal::Number(100.0))
+    }
+
+    #[test]
     fn eval_addition() {
         let tokens = "100 + 100".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
