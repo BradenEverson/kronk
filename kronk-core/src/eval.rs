@@ -12,6 +12,7 @@ use crate::parser::{BinaryOperator, Expr, Literal, UnaryOperator};
 /// An AST interpretter
 #[derive(Debug, Default, Clone)]
 pub struct Interpretter<'a> {
+    /// Local variables
     context: HashMap<String, Literal<'a>>,
 }
 
@@ -71,7 +72,10 @@ impl BinaryOperator {
 impl UnaryOperator {
     /// Evaluates a unary operation
     pub fn eval<'a>(&self, node: Literal<'a>) -> Result<Literal<'a>, RuntimeError> {
-        todo!()
+        match self {
+            Self::Neg => Ok(Literal::Number(-node.number()?)),
+            Self::Not => Ok(Literal::from(!node.bool()?)),
+        }
     }
 }
 
@@ -128,13 +132,35 @@ impl Div for Literal<'_> {
     fn div(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::Number(n1), Self::Number(n2)) => Ok(Self::Number(n1 / n2)),
-
             _ => Err(RuntimeError),
         }
     }
 }
 
+impl From<bool> for Literal<'_> {
+    fn from(value: bool) -> Self {
+        if value { Literal::True } else { Literal::False }
+    }
+}
+
 impl<'a> Literal<'a> {
+    /// Returns the inner literal if it's numeric, asserting a runtime error if not
+    pub fn number(&self) -> Result<f64, RuntimeError> {
+        match self {
+            Self::Number(n) => Ok(*n),
+            _ => Err(RuntimeError),
+        }
+    }
+
+    /// Returns the inner literal if it's boolean, asserting a runtime error if not
+    pub fn bool(&self) -> Result<bool, RuntimeError> {
+        match self {
+            Self::True => Ok(true),
+            Self::False => Ok(false),
+            _ => Err(RuntimeError),
+        }
+    }
+
     /// Returns the True literal if the two literals are losely equal
     pub fn equals(&self, other: &Self) -> Result<Literal<'a>, RuntimeError> {
         match (self, other) {
@@ -225,6 +251,28 @@ mod tests {
         interp.eval(ast).expect("Interpret result");
 
         assert_eq!(interp.context["foo"], Literal::Number(100.0))
+    }
+
+    #[test]
+    fn notting() {
+        let tokens = "!true".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut interp = Interpretter::default();
+        let res = interp.eval(ast).expect("Interpret result");
+        assert_eq!(res, Literal::False)
+    }
+
+    #[test]
+    fn negation() {
+        let tokens = "-100".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut interp = Interpretter::default();
+        let res = interp.eval(ast).expect("Interpret result");
+        assert_eq!(res, Literal::Number(-100.0))
     }
 
     #[test]
