@@ -148,7 +148,7 @@ impl<'a> Literal<'a> {
     pub fn not_equals(&self, other: &Self) -> Result<Literal<'a>, RuntimeError> {
         match (self, other) {
             (Self::Number(n1), Self::Number(n2)) => {
-                Ok(if n1 == n2 { Self::True } else { Self::True })
+                Ok(if n1 == n2 { Self::False } else { Self::True })
             }
             (Self::True, Self::True) => Ok(Self::False),
             (Self::False, Self::False) => Ok(Self::False),
