@@ -128,11 +128,11 @@ impl TryFrom<&str> for Keyword {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TokenError {
     /// The invalid token
-    token: char,
+    pub token: char,
     /// The line that is invalid
-    line: usize,
+    pub line: usize,
     /// The column in that line that's invalid
-    col: usize,
+    pub col: usize,
 }
 
 impl TokenError {

@@ -2,7 +2,11 @@
 
 use std::{env, fs::File, io::Read, process};
 
-use kronk_core::{eval::Interpretter, parser::Parser, tokenizer::Tokenizable};
+use kronk_core::{
+    eval::Interpretter,
+    parser::Parser,
+    tokenizer::{TokenError, Tokenizable},
+};
 
 /// The current version
 const VERSION: &str = "0.1.0";
@@ -58,7 +62,13 @@ fn run_file(file_path: &str) {
     let tokens = match buf.tokenize() {
         Ok(tokens) => tokens,
         Err(err) => {
-            eprintln!("Error tokenizing: {}", err);
+            let TokenError { token, line, col } = err;
+            eprintln!("token error: Unrecognized token: `{token}`");
+            eprintln!(" -> {}:{}:{} ", file_path, line, col);
+            if let Some(line) = buf.lines().nth(line - 1) {
+                println!(" | {line}");
+                println!(" | {}^", "-".repeat(col - 1));
+            }
             process::exit(1);
         }
     };
