@@ -85,14 +85,24 @@ impl<'a> Parser<'a> {
 
     /// A statement is either `print `expression` | `expression` ;
     fn statement(&mut self) -> Result<Expr<'a>, ParseError> {
-        if self.peek() == Token::Keyword(Keyword::Print) {
-            self.advance();
-            let next = self.expression()?;
+        match self.peek() {
+            Token::Keyword(Keyword::Print) => {
+                self.advance();
+                let next = self.expression()?;
 
-            Ok(Expr::Print(Box::new(next)))
-        } else {
-            self.expression()
+                Ok(Expr::Print(Box::new(next)))
+            }
+            Token::Keyword(Keyword::If) => {
+                todo!("Oooooooo time to create an If statement");
+            }
+            _ => self.expression(),
         }
+    }
+
+    /// An If statement is:
+    /// `if ( equality ) { `block` } ( else { `block` })?`
+    fn if_statement(&mut self) -> Result<Expr<'a>, ParseError> {
+        todo!()
     }
 
     /// -> equality  | var ident = equality;
