@@ -165,9 +165,7 @@ impl<'a> Literal<'a> {
     /// Returns the True literal if the two literals are losely equal
     pub fn equals(&self, other: &Self) -> Result<Literal<'a>, RuntimeError> {
         match (self, other) {
-            (Self::Number(n1), Self::Number(n2)) => {
-                Ok(if n1 == n2 { Self::True } else { Self::False })
-            }
+            (Self::Number(n1), Self::Number(n2)) => Ok((n1 == n2).into()),
             (Self::True, Self::True) => Ok(Self::True),
             (Self::False, Self::False) => Ok(Self::True),
 
@@ -176,19 +174,14 @@ impl<'a> Literal<'a> {
 
             (Self::Void, Self::Void) => Ok(Self::True),
 
-            (crazy1, crazy2) if crazy1.to_string() == crazy2.to_string() => Ok(Self::True),
-            (crazy1, crazy2) if crazy1.to_string() != crazy2.to_string() => Ok(Self::False),
-
-            _ => Err(RuntimeError),
+            (crazy1, crazy2) => Ok((crazy1.to_string() == crazy2.to_string()).into()),
         }
     }
 
     /// Returns the True literal if the two literals are not losely equal
     pub fn not_equals(&self, other: &Self) -> Result<Literal<'a>, RuntimeError> {
         match (self, other) {
-            (Self::Number(n1), Self::Number(n2)) => {
-                Ok(if n1 == n2 { Self::False } else { Self::True })
-            }
+            (Self::Number(n1), Self::Number(n2)) => Ok((n1 != n2).into()),
             (Self::True, Self::True) => Ok(Self::False),
             (Self::False, Self::False) => Ok(Self::False),
 
@@ -197,10 +190,7 @@ impl<'a> Literal<'a> {
 
             (Self::Void, Self::Void) => Ok(Self::False),
 
-            (crazy1, crazy2) if crazy1.to_string() == crazy2.to_string() => Ok(Self::False),
-            (crazy1, crazy2) if crazy1.to_string() != crazy2.to_string() => Ok(Self::True),
-
-            _ => Err(RuntimeError),
+            (crazy1, crazy2) => Ok((crazy1.to_string() != crazy2.to_string()).into()),
         }
     }
 }
