@@ -32,6 +32,7 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::Variable(var) => Ok(self.context[var].clone()),
             Expr::Print(node) => {
                 println!("{}", self.eval(*node)?);
                 Ok(Literal::Void)
@@ -207,6 +208,7 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Variable(v) => write!(f, "{v}"),
             Self::Print(node) => write!(f, "print {node}"),
             Self::Assignment { name, val } => write!(f, "{name} = {val}"),
             Self::Literal(l) => write!(f, "{l}"),
@@ -240,6 +242,23 @@ mod tests {
     };
 
     use super::Interpretter;
+
+    #[test]
+    fn use_variables_later() {
+        let tokens = "var foo = 100".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut interp = Interpretter::default();
+        interp.eval(ast).expect("Interpret result");
+
+        let tokens = "foo + 1".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(interp.eval(ast).expect("Eval"), Literal::Number(101.0))
+    }
 
     #[test]
     fn simple_eval() {

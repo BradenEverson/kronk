@@ -214,13 +214,14 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
+    /// Variable | NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
     fn primary(&mut self) -> Result<Expr<'a>, ParseError> {
         match self.advance() {
             Token::Number(n) => Ok(Expr::Literal(Literal::Number(n))),
             Token::Keyword(Keyword::True) => Ok(Expr::Literal(Literal::True)),
             Token::Keyword(Keyword::False) => Ok(Expr::Literal(Literal::False)),
             Token::Keyword(Keyword::Nil) => Ok(Expr::Literal(Literal::Nil)),
+            Token::Identifier(ident) => Ok(Expr::Variable(ident)),
             Token::String(s) => Ok(Expr::Literal(Literal::String(s))),
             Token::OpenParen => {
                 let expr = self.expression()?;
@@ -238,6 +239,8 @@ impl<'a> Parser<'a> {
 pub enum Expr<'a> {
     /// A literal
     Literal(Literal<'a>),
+    /// A variable
+    Variable(&'a str),
     /// Unary operation
     Unary {
         /// Operator
