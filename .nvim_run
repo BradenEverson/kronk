@@ -1,1 +1,1 @@
-cargo run -r -- samples/invalid_tokens.kronk
+cargo run -r -- samples/blocks.kronk

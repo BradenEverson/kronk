@@ -32,6 +32,13 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::Block(exprs) => {
+                for expr in exprs {
+                    self.eval(expr)?;
+                }
+
+                Ok(Literal::Void)
+            }
             Expr::Variable(var) => Ok(self.context[var].clone()),
             Expr::Print(node) => {
                 println!("{}", self.eval(*node)?);
@@ -200,6 +207,15 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Block(b) => {
+                write!(f, "{{\n")?;
+
+                for expr in b {
+                    write!(f, "\t{expr}")?;
+                }
+
+                write!(f, "}}")
+            }
             Self::Variable(v) => write!(f, "{v}"),
             Self::Print(node) => write!(f, "print {node}"),
             Self::Assignment { name, val } => write!(f, "{name} = {val}"),

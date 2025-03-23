@@ -92,14 +92,36 @@ impl<'a> Parser<'a> {
 
                 Ok(Expr::Print(Box::new(next)))
             }
+            Token::OpenBrace => self.block(),
             Token::Keyword(Keyword::If) => self.if_statement(),
             _ => self.expression(),
         }
     }
 
+    /// A block is `{ (expression)* }`
+    fn block(&mut self) -> Result<Expr<'a>, ParseError> {
+        self.consume(&Token::OpenBrace)?;
+        let mut block_items = vec![];
+
+        while self.peek() != Token::CloseBrace {
+            let expr = self.statement()?;
+            self.consume(&Token::Semicolon)?;
+            block_items.push(expr);
+        }
+
+        self.consume(&Token::CloseBrace)?;
+
+        Ok(Expr::Block(block_items))
+    }
+
     /// An If statement is:
     /// `if ( equality ) { `block` } ( else { `block` })?`
     fn if_statement(&mut self) -> Result<Expr<'a>, ParseError> {
+        self.consume(&Token::OpenParen)?;
+        let check = self.equality()?;
+        self.consume(&Token::CloseParen)?;
+        let block = self.block()?;
+
         todo!()
     }
 
@@ -259,6 +281,14 @@ impl<'a> Parser<'a> {
 /// An expression node in the AST
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr<'a> {
+    /// A conditional executor
+    // Conditional {
+    //     condition: Box<Expr<'a>>,
+    //     true_branch: Box<Expr<'a>>,
+    //     else_branch: Option<Box<Expr<'a>>>,
+    // },
+    /// A block to be executed
+    Block(Vec<Expr<'a>>),
     /// A literal
     Literal(Literal<'a>),
     /// A variable
@@ -427,6 +457,41 @@ mod tests {
         let ast = parser.parse().expect("Failed to parse");
 
         assert_eq!(ast, Expr::Literal(Literal::True));
+    }
+
+    #[test]
+    fn empty_block() {
+        let tokens = "{}".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(ast, Expr::Block(vec![]));
+    }
+
+    #[test]
+    fn block_with_stuff() {
+        let tokens = r#"
+        {
+            var foo = 10;
+            print foo;
+        }"#
+        .tokenize()
+        .expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Block(vec![
+                Expr::Assignment {
+                    name: "foo",
+                    val: Box::new(Expr::Literal(Literal::Number(10.0)))
+                },
+                Expr::Print(Box::new(Expr::Variable("foo")))
+            ])
+        );
     }
 
     #[test]
