@@ -92,10 +92,14 @@ impl BinaryOperator {
             Self::Sub => left - right,
             Self::Mul => left * right,
             Self::Div => left / right,
+
+            Self::Gt => Ok((left.number()? > right.number()?).into()),
+            Self::Gte => Ok((left.number()? >= right.number()?).into()),
+            Self::Lt => Ok((left.number()? < right.number()?).into()),
+            Self::Lte => Ok((left.number()? <= right.number()?).into()),
+
             Self::Eq => left.equals(&right),
             Self::Neq => left.not_equals(&right),
-
-            op => todo!("Implement op {op:?}"),
         }
     }
 }

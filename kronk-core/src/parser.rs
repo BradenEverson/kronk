@@ -68,7 +68,7 @@ impl<'a> Parser<'a> {
     pub fn parse_many(&mut self) -> Result<Vec<Expr<'a>>, ParseError> {
         let mut expressions = vec![];
 
-        while self.peek() != Token::EOF {
+        while !self.at_end() {
             let expr = self.parse()?;
             self.consume(&Token::Semicolon)?;
             expressions.push(expr);
