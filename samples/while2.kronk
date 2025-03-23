@@ -1,0 +1,15 @@
+var flag = false;
+var i = 1;
+
+while (!flag) {
+    if (i == 50) {
+        print "done!";
+        var flag = true;
+    } else if (i == 25) {
+        print "halfway there!";
+    } else {
+        print i + "/50";
+    };
+
+    var i = i + 1;
+};

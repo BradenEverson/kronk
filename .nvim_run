@@ -1,1 +1,1 @@
-cargo run -r -- samples/while.kronk
+cargo run -r -- samples/while2.kronk
