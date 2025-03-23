@@ -66,14 +66,38 @@ impl<'a> Parser<'a> {
 
     /// Parses the current token stream
     pub fn parse(&mut self) -> Result<Expr<'a>, ParseError> {
-        let expr = self.expression()?;
+        let expr = self.statement()?;
         self.consume(&Token::EOF)?;
         Ok(expr)
     }
 
-    /// -> equality ;
+    /// A statement is either `print `expression` | `expression` ;
+    fn statement(&mut self) -> Result<Expr<'a>, ParseError> {
+        if self.peek() == Token::Keyword(Keyword::Print) {
+            self.advance();
+            todo!()
+        } else {
+            self.expression()
+        }
+    }
+
+    /// -> equality  | var ident = equality;
     fn expression(&mut self) -> Result<Expr<'a>, ParseError> {
-        self.equality()
+        if self.peek() == Token::Keyword(Keyword::Var) {
+            self.advance();
+            if let Token::Identifier(name) = self.advance() {
+                self.consume(&Token::Equal)?;
+                let val = self.equality()?;
+                Ok(Expr::Assignment {
+                    name,
+                    val: Box::new(val),
+                })
+            } else {
+                Err(ParseError)
+            }
+        } else {
+            self.equality()
+        }
     }
 
     /// -> comparison ( ( "!=" | "==" ) comparison )* ;
@@ -221,6 +245,15 @@ pub enum Expr<'a> {
         /// Expression Node
         node: Box<Expr<'a>>,
     },
+    /// Print the expressions result to stdout
+    Print(Box<Expr<'a>>),
+    /// Assignment operator
+    Assignment {
+        /// The variable name
+        name: &'a str,
+        /// The variable value
+        val: Box<Expr<'a>>,
+    },
     /// Binary operation
     Binary {
         /// Operator
@@ -307,6 +340,22 @@ mod tests {
         parser::{BinaryOperator, Expr, Literal, Parser, UnaryOperator},
         tokenizer::Tokenizable,
     };
+
+    #[test]
+    fn assignment() {
+        let tokens = "var foo = 100".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Assignment {
+                name: "foo",
+                val: Box::new(Expr::Literal(Literal::Number(100.0)))
+            }
+        )
+    }
 
     #[test]
     fn basic_ast_generated() {

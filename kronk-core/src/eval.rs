@@ -1,6 +1,7 @@
 //! Interpretter
 
 use std::{
+    collections::HashMap,
     error::Error,
     fmt::Display,
     ops::{Add, Div, Mul, Sub},
@@ -10,7 +11,9 @@ use crate::parser::{BinaryOperator, Expr, Literal, UnaryOperator};
 
 /// An AST interpretter
 #[derive(Debug, Default, Clone)]
-pub struct Interpretter {}
+pub struct Interpretter<'a> {
+    context: HashMap<String, Literal<'a>>,
+}
 
 /// An error during execution
 #[derive(Debug, Clone, Copy)]
@@ -24,10 +27,19 @@ impl Display for RuntimeError {
 
 impl Error for RuntimeError {}
 
-impl Interpretter {
+impl<'a> Interpretter<'a> {
     /// Interprets an AST
-    pub fn eval<'a>(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
+    pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::Print(node) => {
+                println!("{}", self.eval(*node)?);
+                Ok(Literal::Void)
+            }
+            Expr::Assignment { name, val } => {
+                let val = self.eval(*val)?;
+                self.context.insert(name.to_string(), val);
+                Ok(Literal::Void)
+            }
             Expr::Literal(l) => Ok(l),
             Expr::Grouping(inner) => self.eval(*inner),
             Expr::Binary { op, left, right } => op.eval(self.eval(*left)?, self.eval(*right)?),
@@ -169,6 +181,8 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Print(node) => write!(f, "print {node}"),
+            Self::Assignment { name, val } => write!(f, "{name} = {val}"),
             Self::Literal(l) => write!(f, "{l}"),
             Self::Unary { op, node } => match op {
                 UnaryOperator::Neg => write!(f, "-{node}"),
