@@ -92,9 +92,7 @@ impl<'a> Parser<'a> {
 
                 Ok(Expr::Print(Box::new(next)))
             }
-            Token::Keyword(Keyword::If) => {
-                todo!("Oooooooo time to create an If statement");
-            }
+            Token::Keyword(Keyword::If) => self.if_statement(),
             _ => self.expression(),
         }
     }
