@@ -158,6 +158,8 @@ impl<'a> Literal<'a> {
         match self {
             Self::True => Ok(true),
             Self::False => Ok(false),
+            Self::Number(0.0) => Ok(false),
+            Self::Number(_) => Ok(true),
             _ => Err(RuntimeError),
         }
     }
