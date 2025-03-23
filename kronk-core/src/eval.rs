@@ -32,6 +32,13 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::WhileLoop { condition, exec } => {
+                while self.eval(*condition.clone())?.bool()? {
+                    self.eval(*exec.clone())?;
+                }
+
+                Ok(Literal::Void)
+            }
             Expr::Conditional {
                 condition,
                 true_branch,
@@ -223,6 +230,10 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Expr::WhileLoop { condition, exec } => {
+                write!(f, "while ({condition}) {{\n\t{exec}\n}}\n")
+            }
+
             Expr::Conditional {
                 condition,
                 true_branch,
@@ -231,11 +242,11 @@ impl Display for Expr<'_> {
                 if let Some(elb) = else_branch {
                     write!(
                         f,
-                        "if ({}) {{\n\t{}\n}} else {{\n\t{}\n}}",
+                        "if ({}) {{\n\t{}\n}} else {{\n\t{}\n}}\n",
                         condition, true_branch, elb
                     )
                 } else {
-                    write!(f, "if ({}) {{\n\t{}\n}}", condition, true_branch)
+                    write!(f, "if ({}) {{\n\t{}\n}}\n", condition, true_branch)
                 }
             }
             Self::Block(b) => {

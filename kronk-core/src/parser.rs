@@ -85,6 +85,8 @@ impl<'a> Parser<'a> {
 
     /// A statement is either `print `expression` | `expression` ;
     fn statement(&mut self) -> Result<Expr<'a>, ParseError> {
+        // TODO, this here is where we should be expecting and
+        // consuming semicolons
         match self.peek() {
             Token::Keyword(Keyword::Print) => {
                 self.advance();
@@ -94,8 +96,23 @@ impl<'a> Parser<'a> {
             }
             Token::OpenBrace => self.block(),
             Token::Keyword(Keyword::If) => self.if_statement(),
+            Token::Keyword(Keyword::While) => self.while_statement(),
             _ => self.expression(),
         }
+    }
+
+    /// A while statement is `while ( `equality` ) `expression``
+    fn while_statement(&mut self) -> Result<Expr<'a>, ParseError> {
+        self.consume(&Token::Keyword(Keyword::While))?;
+        self.consume(&Token::OpenParen)?;
+
+        let condition = Box::new(self.equality()?);
+
+        self.consume(&Token::CloseParen)?;
+
+        let exec = Box::new(self.statement()?);
+
+        Ok(Expr::WhileLoop { condition, exec })
     }
 
     /// A block is `{ (expression)* }`
@@ -293,6 +310,13 @@ impl<'a> Parser<'a> {
 /// An expression node in the AST
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr<'a> {
+    /// A while style loop that will repeat until the inner condition is false
+    WhileLoop {
+        /// Condition being checked
+        condition: Box<Expr<'a>>,
+        /// Body being executed until then
+        exec: Box<Expr<'a>>,
+    },
     /// A conditional executor
     Conditional {
         /// The condition being checked
@@ -440,6 +464,22 @@ mod tests {
                 op: BinaryOperator::Add,
                 left: Box::new(Expr::Literal(Literal::Number(100.0))),
                 right: Box::new(Expr::Literal(Literal::Number(100.0)))
+            }
+        )
+    }
+
+    #[test]
+    fn while_loop_structure() {
+        let tokens = "while (true) {};".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::WhileLoop {
+                condition: Box::new(Expr::Literal(Literal::True)),
+                exec: Box::new(Expr::Block(vec![]))
             }
         )
     }
