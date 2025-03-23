@@ -1,0 +1,4 @@
+var foo = "Hello";
+var bar = " World!";
+
+print foo + bar;

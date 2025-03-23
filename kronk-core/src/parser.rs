@@ -64,10 +64,22 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses a token stream into a sequence of statements
+    pub fn parse_many(&mut self) -> Result<Vec<Expr<'a>>, ParseError> {
+        let mut expressions = vec![];
+
+        while self.peek() != Token::EOF {
+            let expr = self.parse()?;
+            self.consume(&Token::Semicolon)?;
+            expressions.push(expr);
+        }
+
+        Ok(expressions)
+    }
+
     /// Parses the current token stream
     pub fn parse(&mut self) -> Result<Expr<'a>, ParseError> {
         let expr = self.statement()?;
-        self.consume(&Token::EOF)?;
         Ok(expr)
     }
 
@@ -75,7 +87,9 @@ impl<'a> Parser<'a> {
     fn statement(&mut self) -> Result<Expr<'a>, ParseError> {
         if self.peek() == Token::Keyword(Keyword::Print) {
             self.advance();
-            todo!()
+            let next = self.expression()?;
+
+            Ok(Expr::Print(Box::new(next)))
         } else {
             self.expression()
         }

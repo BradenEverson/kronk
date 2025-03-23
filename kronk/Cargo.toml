@@ -5,6 +5,7 @@ edition = "2024"
 authors.workspace = true
 
 [dependencies]
+kronk-core = {path = "../kronk-core"}
 
 [lints]
 workspace = true

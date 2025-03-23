@@ -5,6 +5,9 @@ version = 4
 [[package]]
 name = "kronk"
 version = "0.1.0"
+dependencies = [
+ "kronk-core",
+]
 
 [[package]]
 name = "kronk-core"
