@@ -117,12 +117,24 @@ impl<'a> Parser<'a> {
     /// An If statement is:
     /// `if ( equality ) { `block` } ( else { `block` })?`
     fn if_statement(&mut self) -> Result<Expr<'a>, ParseError> {
+        self.consume(&Token::Keyword(Keyword::If))?;
         self.consume(&Token::OpenParen)?;
         let check = self.equality()?;
         self.consume(&Token::CloseParen)?;
         let block = self.block()?;
 
-        todo!()
+        let mut else_branch = None;
+
+        if self.peek() == Token::Keyword(Keyword::Else) {
+            self.advance();
+            else_branch = Some(Box::new(self.statement()?));
+        }
+
+        Ok(Expr::Conditional {
+            condition: Box::new(check),
+            true_branch: Box::new(block),
+            else_branch,
+        })
     }
 
     /// -> equality  | var ident = equality;
@@ -282,11 +294,14 @@ impl<'a> Parser<'a> {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr<'a> {
     /// A conditional executor
-    // Conditional {
-    //     condition: Box<Expr<'a>>,
-    //     true_branch: Box<Expr<'a>>,
-    //     else_branch: Option<Box<Expr<'a>>>,
-    // },
+    Conditional {
+        /// The condition being checked
+        condition: Box<Expr<'a>>,
+        /// What is executed if the condition is true
+        true_branch: Box<Expr<'a>>,
+        /// What is optionally executed if else
+        else_branch: Option<Box<Expr<'a>>>,
+    },
     /// A block to be executed
     Block(Vec<Expr<'a>>),
     /// A literal
@@ -467,6 +482,31 @@ mod tests {
         let ast = parser.parse().expect("Failed to parse");
 
         assert_eq!(ast, Expr::Block(vec![]));
+    }
+
+    #[test]
+    fn if_block_simple() {
+        let tokens = r#"
+            if (true) {
+                print "Hello!";
+            };
+        "#
+        .tokenize()
+        .expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::Conditional {
+                condition: Box::new(Expr::Literal(Literal::True)),
+                true_branch: Box::new(Expr::Block(vec![Expr::Print(Box::new(Expr::Literal(
+                    Literal::String("Hello!")
+                )))])),
+                else_branch: None,
+            }
+        );
     }
 
     #[test]

@@ -32,6 +32,22 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::Conditional {
+                condition,
+                true_branch,
+                else_branch,
+            } => {
+                let cond_check = self.eval(*condition)?.bool()?;
+
+                if cond_check {
+                    self.eval(*true_branch)
+                } else if let Some(elb) = else_branch {
+                    self.eval(*elb)
+                } else {
+                    Ok(Literal::Void)
+                }
+            }
+
             Expr::Block(exprs) => {
                 for expr in exprs {
                     self.eval(expr)?;
@@ -207,6 +223,21 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Expr::Conditional {
+                condition,
+                true_branch,
+                else_branch,
+            } => {
+                if let Some(elb) = else_branch {
+                    write!(
+                        f,
+                        "if ({}) {{\n\t{}\n}} else {{\n\t{}\n}}",
+                        condition, true_branch, elb
+                    )
+                } else {
+                    write!(f, "if ({}) {{\n\t{}\n}}", condition, true_branch)
+                }
+            }
             Self::Block(b) => {
                 write!(f, "{{\n")?;
 

@@ -1,1 +1,1 @@
-cargo run -r -- samples/nested_blocks.kronk
+cargo run -r -- samples/if.kronk
