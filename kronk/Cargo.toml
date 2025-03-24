@@ -9,7 +9,7 @@ repository = "https://github.com/BradenEverson/kronk"
 readme = "README.md"
 
 [dependencies]
-kronk-core = { path = "../kronk-core" }
+kronk-core = { version = "0.1.0", path = "../kronk-core" }
 
 [lints]
 workspace = true
