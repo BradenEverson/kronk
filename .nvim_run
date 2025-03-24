@@ -1,1 +1,1 @@
-cargo run -r -- samples/roar.kronk
+cargo run -r -- samples/hello.kronk
