@@ -8,9 +8,22 @@ pub trait Tokenizable {
     fn tokenize(&self) -> Result<Vec<Token<'_>>, TokenError>;
 }
 
+/// A token tag with additional context like location in the stream for better error logging
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Token<'a> {
+    /// Token's line
+    pub line: usize,
+    /// Token's column
+    pub col: usize,
+    /// Token's length
+    pub len: usize,
+    /// Token's tag
+    pub tag: TokenTag<'a>,
+}
+
 /// A token in the parsing process
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Token<'a> {
+pub enum TokenTag<'a> {
     /// An identifier
     Identifier(&'a str),
     /// A numeric literal
@@ -165,61 +178,66 @@ where
         let mut col = 0;
 
         while let Some((idx, tok)) = peek.next() {
+            let mut len = 1;
             col += 1;
-            let next = match tok {
-                '{' => Token::OpenBrace,
-                '}' => Token::CloseBrace,
+            let next_tag = match tok {
+                '{' => TokenTag::OpenBrace,
+                '}' => TokenTag::CloseBrace,
 
-                '(' => Token::OpenParen,
-                ')' => Token::CloseParen,
+                '(' => TokenTag::OpenParen,
+                ')' => TokenTag::CloseParen,
 
-                ';' => Token::Semicolon,
-                '.' => Token::Dot,
+                ';' => TokenTag::Semicolon,
+                '.' => TokenTag::Dot,
 
                 '=' => match peek.peek() {
                     Some((_, '=')) => {
                         peek.next();
                         col += 1;
+                        len += 1;
 
-                        Token::EqualEqual
+                        TokenTag::EqualEqual
                     }
-                    _ => Token::Equal,
+                    _ => TokenTag::Equal,
                 },
 
                 '!' => match peek.peek() {
                     Some((_, '=')) => {
                         peek.next();
                         col += 1;
+                        len += 1;
 
-                        Token::BangEqual
+                        TokenTag::BangEqual
                     }
-                    _ => Token::Bang,
+                    _ => TokenTag::Bang,
                 },
 
                 '<' => match peek.peek() {
                     Some((_, '=')) => {
                         peek.next();
                         col += 1;
+                        len += 1;
 
-                        Token::LessEqual
+                        TokenTag::LessEqual
                     }
-                    _ => Token::Less,
+                    _ => TokenTag::Less,
                 },
 
                 '>' => match peek.peek() {
                     Some((_, '=')) => {
                         peek.next();
                         col += 1;
+                        len += 1;
 
-                        Token::GreaterEqual
+                        TokenTag::GreaterEqual
                     }
-                    _ => Token::Greater,
+                    _ => TokenTag::Greater,
                 },
 
-                '+' => Token::Plus,
-                '-' => Token::Minus,
-                '*' => Token::Star,
-                '/' => Token::Slash,
+                '+' => TokenTag::Plus,
+                '-' => TokenTag::Minus,
+                '*' => TokenTag::Star,
+                '/' => TokenTag::Slash,
 
                 '\n' => {
                     col = 0;
@@ -237,9 +255,11 @@ where
                     while let Some((_, next)) = peek.peek() {
                         if next.is_numeric() {
                             col += 1;
+                            len += 1;
                             curr.push(peek.next().unwrap().1);
                         } else if *next == '.' && !dot {
                             col += 1;
+                            len += 1;
                             curr.push(peek.next().unwrap().1);
                             dot = true;
                         } else {
@@ -249,7 +269,7 @@ where
 
                     // Unwrap safety, as we build the number we are ensuring that only numeric
                     // characters are added to it, this cannot fail
-                    Token::Number(curr.parse().unwrap())
+                    TokenTag::Number(curr.parse().unwrap())
                 }
 
                 '"' => {
@@ -260,6 +280,7 @@ where
                         if c != '"' {
                             idx2 += 1;
                             col += 1;
+                            len += 1;
                         } else {
                             ended = true;
                             break;
@@ -267,7 +288,7 @@ where
                     }
 
                     if ended {
-                        Token::String(&self.as_ref()[idx + 1..=idx2])
+                        TokenTag::String(&self.as_ref()[idx + 1..=idx2])
                     } else {
                         return Err(TokenError::new('"', line, col));
                     }
@@ -283,24 +304,36 @@ where
 
                         end = *idx2;
                         col += 1;
+                        len += 1;
                         peek.next();
                     }
 
                     let word = &self.as_ref()[idx..=end];
                     if let Ok(keyword) = Keyword::try_from(word) {
-                        Token::Keyword(keyword)
+                        TokenTag::Keyword(keyword)
                     } else {
-                        Token::Identifier(word)
+                        TokenTag::Identifier(word)
                     }
                 }
 
                 bad => return Err(TokenError::new(bad, line, col)),
             };
 
+            let next = Token {
+                line,
+                col,
+                len,
+                tag: next_tag,
+            };
             tokens.push(next);
         }
 
-        tokens.push(Token::EOF);
+        tokens.push(Token {
+            line,
+            col,
+            len: 0,
+            tag: TokenTag::EOF,
+        });
 
         Ok(tokens)
     }
@@ -310,19 +343,23 @@ where
 mod tests {
     use crate::tokenizer::{Keyword, Token, TokenError};
 
-    use super::Tokenizable;
+    use super::{TokenTag, Tokenizable};
+
+    fn tags<'a>(toks: Vec<Token<'a>>) -> Vec<TokenTag<'a>> {
+        toks.iter().map(|t| t.tag).collect()
+    }
 
     #[test]
     fn operators_parsing() {
         let tokens = "var pi = 3.14".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("pi"),
-                Token::Equal,
-                Token::Number(3.14),
-                Token::EOF
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("pi"),
+                TokenTag::Equal,
+                TokenTag::Number(3.14),
+                TokenTag::EOF
             ]
         )
     }
@@ -336,20 +373,20 @@ mod tests {
 
     #[test]
     fn parentheses_and_braces() {
-        let tokens = "(x + y) { z; }".tokenize().expect("Tokenize");
+        let tokens = "(x + y) { z; }".tokenize().expect("TokenizeTag");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::OpenParen,
-                Token::Identifier("x"),
-                Token::Plus,
-                Token::Identifier("y"),
-                Token::CloseParen,
-                Token::OpenBrace,
-                Token::Identifier("z"),
-                Token::Semicolon,
-                Token::CloseBrace,
-                Token::EOF
+                TokenTag::OpenParen,
+                TokenTag::Identifier("x"),
+                TokenTag::Plus,
+                TokenTag::Identifier("y"),
+                TokenTag::CloseParen,
+                TokenTag::OpenBrace,
+                TokenTag::Identifier("z"),
+                TokenTag::Semicolon,
+                TokenTag::CloseBrace,
+                TokenTag::EOF
             ]
         );
     }
@@ -366,20 +403,20 @@ mod tests {
     #[test]
     fn empty_input() {
         let tokens = "".tokenize().expect("Tokenize");
-        assert_eq!(tokens, [Token::EOF]);
+        assert_eq!(tags(tokens), [TokenTag::EOF]);
     }
 
     #[test]
     fn keywords_as_identifiers() {
         let tokens = "var varx = forx".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("varx"),
-                Token::Equal,
-                Token::Identifier("forx"),
-                Token::EOF
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("varx"),
+                TokenTag::Equal,
+                TokenTag::Identifier("forx"),
+                TokenTag::EOF
             ]
         );
     }
@@ -390,12 +427,12 @@ mod tests {
             .tokenize()
             .expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Identifier("very_long_identifier_name"),
-                Token::Equal,
-                Token::Number(123.0),
-                Token::EOF
+                TokenTag::Identifier("very_long_identifier_name"),
+                TokenTag::Equal,
+                TokenTag::Number(123.0),
+                TokenTag::EOF
             ]
         );
     }
@@ -408,47 +445,47 @@ mod tests {
 
     #[test]
     fn string() {
-        let tokens = r#""hello!""#.tokenize().expect("Tokenize");
-        assert_eq!(tokens, [Token::String("hello!"), Token::EOF])
+        let tokens = r#""hello!""#.tokenize().expect("TokenizeTag");
+        assert_eq!(tags(tokens), [TokenTag::String("hello!"), TokenTag::EOF])
     }
 
     #[test]
     fn whitespace_handling() {
         let tokens = "  var   x  =  123  ".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Number(123.0),
-                Token::EOF
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Number(123.0),
+                TokenTag::EOF
             ]
         );
     }
 
     #[test]
     fn numeric_literals() {
-        let tokens = "123 45.67 0.123 123.".tokenize().expect("Tokenize");
+        let tokens = "123 45.67 0.123 123.".tokenize().expect("TokenizeTag");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Number(123.0),
-                Token::Number(45.67),
-                Token::Number(0.123),
-                Token::Number(123.0),
-                Token::EOF
+                TokenTag::Number(123.0),
+                TokenTag::Number(45.67),
+                TokenTag::Number(0.123),
+                TokenTag::Number(123.0),
+                TokenTag::EOF
             ]
         );
 
         let tokens = "123.45.67".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Number(123.45),
-                Token::Dot,
-                Token::Number(67.0),
-                Token::EOF
+                TokenTag::Number(123.45),
+                TokenTag::Dot,
+                TokenTag::Number(67.0),
+                TokenTag::EOF
             ]
         );
     }
@@ -457,25 +494,25 @@ mod tests {
     fn identifiers_and_keywords() {
         let tokens = "var x = if y".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Keyword(Keyword::If),
-                Token::Identifier("y"),
-                Token::EOF
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Keyword(Keyword::If),
+                TokenTag::Identifier("y"),
+                TokenTag::EOF
             ]
         );
 
         let tokens = "for var ifelse".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Keyword(Keyword::For),
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("ifelse"),
-                Token::EOF
+                TokenTag::Keyword(Keyword::For),
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("ifelse"),
+                TokenTag::EOF
             ]
         );
     }
@@ -484,22 +521,22 @@ mod tests {
     fn arithmetic_expressions() {
         let tokens = "x = (a + b) * c - d / e".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::OpenParen,
-                Token::Identifier("a"),
-                Token::Plus,
-                Token::Identifier("b"),
-                Token::CloseParen,
-                Token::Star,
-                Token::Identifier("c"),
-                Token::Minus,
-                Token::Identifier("d"),
-                Token::Slash,
-                Token::Identifier("e"),
-                Token::EOF
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::OpenParen,
+                TokenTag::Identifier("a"),
+                TokenTag::Plus,
+                TokenTag::Identifier("b"),
+                TokenTag::CloseParen,
+                TokenTag::Star,
+                TokenTag::Identifier("c"),
+                TokenTag::Minus,
+                TokenTag::Identifier("d"),
+                TokenTag::Slash,
+                TokenTag::Identifier("e"),
+                TokenTag::EOF
             ]
         );
     }
@@ -523,25 +560,25 @@ x = x + $;
     "#;
         let tokens = input.tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Number(1.0),
-                Token::Semicolon,
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("y"),
-                Token::Equal,
-                Token::Number(2.0),
-                Token::Semicolon,
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Identifier("x"),
-                Token::Plus,
-                Token::Identifier("y"),
-                Token::Semicolon,
-                Token::EOF
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Number(1.0),
+                TokenTag::Semicolon,
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("y"),
+                TokenTag::Equal,
+                TokenTag::Number(2.0),
+                TokenTag::Semicolon,
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Identifier("x"),
+                TokenTag::Plus,
+                TokenTag::Identifier("y"),
+                TokenTag::Semicolon,
+                TokenTag::EOF
             ]
         );
     }
@@ -549,31 +586,34 @@ x = x + $;
     #[test]
     fn edge_cases_for_identifiers() {
         let tokens = "_underscore".tokenize().expect("Tokenize");
-        assert_eq!(tokens, [Token::Identifier("_underscore"), Token::EOF]);
+        assert_eq!(
+            tags(tokens),
+            [TokenTag::Identifier("_underscore"), TokenTag::EOF]
+        );
 
         let tokens = "var1".tokenize().expect("Tokenize");
-        assert_eq!(tokens, [Token::Identifier("var1"), Token::EOF]);
+        assert_eq!(tags(tokens), [TokenTag::Identifier("var1"), TokenTag::EOF]);
 
         let tokens = "var_1".tokenize().expect("Tokenize");
-        assert_eq!(tokens, [Token::Identifier("var_1"), Token::EOF]);
+        assert_eq!(tags(tokens), [TokenTag::Identifier("var_1"), TokenTag::EOF]);
     }
 
     #[test]
     fn edge_cases_for_numbers() {
         let tokens = "0123".tokenize().expect("Tokenize");
-        assert_eq!(tokens, [Token::Number(123.0), Token::EOF]);
+        assert_eq!(tags(tokens), [TokenTag::Number(123.0), TokenTag::EOF]);
 
         let tokens = "123.".tokenize().expect("Tokenize");
-        assert_eq!(tokens, [Token::Number(123.0), Token::EOF]);
+        assert_eq!(tags(tokens), [TokenTag::Number(123.0), TokenTag::EOF]);
 
         let tokens = "123..456".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Number(123.0),
-                Token::Dot,
-                Token::Number(456.0),
-                Token::EOF
+                TokenTag::Number(123.0),
+                TokenTag::Dot,
+                TokenTag::Number(456.0),
+                TokenTag::EOF
             ]
         );
     }
@@ -582,81 +622,81 @@ x = x + $;
     fn edge_cases_for_operators() {
         let tokens = "x = y + -z".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Identifier("y"),
-                Token::Plus,
-                Token::Minus,
-                Token::Identifier("z"),
-                Token::EOF
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Identifier("y"),
+                TokenTag::Plus,
+                TokenTag::Minus,
+                TokenTag::Identifier("z"),
+                TokenTag::EOF
             ]
         );
 
         let tokens = "x = y * / z".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Identifier("y"),
-                Token::Star,
-                Token::Slash,
-                Token::Identifier("z"),
-                Token::EOF
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Identifier("y"),
+                TokenTag::Star,
+                TokenTag::Slash,
+                TokenTag::Identifier("z"),
+                TokenTag::EOF
             ]
         );
 
-        let tokens = "x = y == z".tokenize().expect("Tokenize");
+        let tokens = "x = y == z".tokenize().expect("TokenizeTag");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Identifier("y"),
-                Token::EqualEqual,
-                Token::Identifier("z"),
-                Token::EOF
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Identifier("y"),
+                TokenTag::EqualEqual,
+                TokenTag::Identifier("z"),
+                TokenTag::EOF
             ]
         );
     }
 
     #[test]
     fn edge_cases_for_whitespace() {
-        let tokens = "   var   x   =   123   ".tokenize().expect("Tokenize");
+        let tokens = "   var   x   =   123   ".tokenize().expect("TokenizeTag");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Number(123.0),
-                Token::EOF
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Number(123.0),
+                TokenTag::EOF
             ]
         );
 
         let tokens = "\tvar\tx\t=\t123\t".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Number(123.0),
-                Token::EOF
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Number(123.0),
+                TokenTag::EOF
             ]
         );
 
         let tokens = "\nvar\nx\n=\n123\n".tokenize().expect("Tokenize");
         assert_eq!(
-            tokens,
+            tags(tokens),
             [
-                Token::Keyword(Keyword::Var),
-                Token::Identifier("x"),
-                Token::Equal,
-                Token::Number(123.0),
-                Token::EOF
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Identifier("x"),
+                TokenTag::Equal,
+                TokenTag::Number(123.0),
+                TokenTag::EOF
             ]
         );
     }

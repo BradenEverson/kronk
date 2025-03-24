@@ -2,7 +2,7 @@
 
 use std::{error::Error, fmt::Display};
 
-use crate::tokenizer::{Keyword, Token};
+use crate::tokenizer::{Keyword, Token, TokenTag};
 
 /// A parser holding context
 pub struct Parser<'a> {
@@ -37,8 +37,8 @@ impl<'a> Parser<'a> {
     }
 
     /// Consumes the current token assuming it's the provided Token, failing if not
-    fn consume(&mut self, token: &Token<'_>) -> Result<(), ParseError> {
-        if &self.peek() == token {
+    fn consume(&mut self, token: &TokenTag<'_>) -> Result<(), ParseError> {
+        if &self.peek().tag == token {
             self.idx += 1;
             Ok(())
         } else {
@@ -48,7 +48,7 @@ impl<'a> Parser<'a> {
 
     /// Checks if stream is finished
     fn at_end(&self) -> bool {
-        self.peek() == Token::EOF
+        self.peek().tag == TokenTag::EOF
     }
 
     /// Advances forward and returns the token we hop after
@@ -70,7 +70,7 @@ impl<'a> Parser<'a> {
 
         while !self.at_end() {
             let expr = self.parse()?;
-            self.consume(&Token::Semicolon)?;
+            self.consume(&TokenTag::Semicolon)?;
             expressions.push(expr);
         }
 
@@ -87,28 +87,28 @@ impl<'a> Parser<'a> {
     fn statement(&mut self) -> Result<Expr<'a>, ParseError> {
         // TODO, this here is where we should be expecting and
         // consuming semicolons
-        match self.peek() {
-            Token::Keyword(Keyword::Print) => {
+        match self.peek().tag {
+            TokenTag::Keyword(Keyword::Print) => {
                 self.advance();
                 let next = self.expression()?;
 
                 Ok(Expr::Print(Box::new(next)))
             }
-            Token::OpenBrace => self.block(),
-            Token::Keyword(Keyword::If) => self.if_statement(),
-            Token::Keyword(Keyword::While) => self.while_statement(),
+            TokenTag::OpenBrace => self.block(),
+            TokenTag::Keyword(Keyword::If) => self.if_statement(),
+            TokenTag::Keyword(Keyword::While) => self.while_statement(),
             _ => self.expression(),
         }
     }
 
     /// A while statement is `while ( `equality` ) `expression``
     fn while_statement(&mut self) -> Result<Expr<'a>, ParseError> {
-        self.consume(&Token::Keyword(Keyword::While))?;
-        self.consume(&Token::OpenParen)?;
+        self.consume(&TokenTag::Keyword(Keyword::While))?;
+        self.consume(&TokenTag::OpenParen)?;
 
         let condition = Box::new(self.equality()?);
 
-        self.consume(&Token::CloseParen)?;
+        self.consume(&TokenTag::CloseParen)?;
 
         let exec = Box::new(self.statement()?);
 
@@ -117,16 +117,16 @@ impl<'a> Parser<'a> {
 
     /// A block is `{ (expression)* }`
     fn block(&mut self) -> Result<Expr<'a>, ParseError> {
-        self.consume(&Token::OpenBrace)?;
+        self.consume(&TokenTag::OpenBrace)?;
         let mut block_items = vec![];
 
-        while self.peek() != Token::CloseBrace {
+        while self.peek().tag != TokenTag::CloseBrace {
             let expr = self.statement()?;
-            self.consume(&Token::Semicolon)?;
+            self.consume(&TokenTag::Semicolon)?;
             block_items.push(expr);
         }
 
-        self.consume(&Token::CloseBrace)?;
+        self.consume(&TokenTag::CloseBrace)?;
 
         Ok(Expr::Block(block_items))
     }
@@ -134,15 +134,15 @@ impl<'a> Parser<'a> {
     /// An If statement is:
     /// `if ( equality ) { `block` } ( else { `block` })?`
     fn if_statement(&mut self) -> Result<Expr<'a>, ParseError> {
-        self.consume(&Token::Keyword(Keyword::If))?;
-        self.consume(&Token::OpenParen)?;
+        self.consume(&TokenTag::Keyword(Keyword::If))?;
+        self.consume(&TokenTag::OpenParen)?;
         let check = self.equality()?;
-        self.consume(&Token::CloseParen)?;
+        self.consume(&TokenTag::CloseParen)?;
         let block = self.block()?;
 
         let mut else_branch = None;
 
-        if self.peek() == Token::Keyword(Keyword::Else) {
+        if self.peek().tag == TokenTag::Keyword(Keyword::Else) {
             self.advance();
             else_branch = Some(Box::new(self.statement()?));
         }
@@ -156,10 +156,10 @@ impl<'a> Parser<'a> {
 
     /// -> equality  | var ident = equality;
     fn expression(&mut self) -> Result<Expr<'a>, ParseError> {
-        if self.peek() == Token::Keyword(Keyword::Var) {
+        if self.peek().tag == TokenTag::Keyword(Keyword::Var) {
             self.advance();
-            if let Token::Identifier(name) = self.advance() {
-                self.consume(&Token::Equal)?;
+            if let TokenTag::Identifier(name) = self.advance().tag {
+                self.consume(&TokenTag::Equal)?;
                 let val = self.equality()?;
                 Ok(Expr::Assignment {
                     name,
@@ -177,10 +177,10 @@ impl<'a> Parser<'a> {
     fn equality(&mut self) -> Result<Expr<'a>, ParseError> {
         let mut expr = self.comparison()?;
 
-        while matches!(self.peek(), Token::BangEqual | Token::EqualEqual) {
-            let op = match self.advance() {
-                Token::BangEqual => BinaryOperator::Neq,
-                Token::EqualEqual => BinaryOperator::Eq,
+        while matches!(self.peek().tag, TokenTag::BangEqual | TokenTag::EqualEqual) {
+            let op = match self.advance().tag {
+                TokenTag::BangEqual => BinaryOperator::Neq,
+                TokenTag::EqualEqual => BinaryOperator::Eq,
                 _ => unreachable!(),
             };
 
@@ -201,14 +201,14 @@ impl<'a> Parser<'a> {
         let mut expr = self.term()?;
 
         while matches!(
-            self.peek(),
-            Token::Greater | Token::GreaterEqual | Token::Less | Token::LessEqual
+            self.peek().tag,
+            TokenTag::Greater | TokenTag::GreaterEqual | TokenTag::Less | TokenTag::LessEqual
         ) {
-            let op = match self.advance() {
-                Token::GreaterEqual => BinaryOperator::Gte,
-                Token::Greater => BinaryOperator::Gt,
-                Token::LessEqual => BinaryOperator::Lte,
-                Token::Less => BinaryOperator::Lt,
+            let op = match self.advance().tag {
+                TokenTag::GreaterEqual => BinaryOperator::Gte,
+                TokenTag::Greater => BinaryOperator::Gt,
+                TokenTag::LessEqual => BinaryOperator::Lte,
+                TokenTag::Less => BinaryOperator::Lt,
                 _ => unreachable!(),
             };
 
@@ -227,10 +227,10 @@ impl<'a> Parser<'a> {
     fn term(&mut self) -> Result<Expr<'a>, ParseError> {
         let mut expr = self.factor()?;
 
-        while matches!(self.peek(), Token::Plus | Token::Minus) {
-            let op = match self.advance() {
-                Token::Minus => BinaryOperator::Sub,
-                Token::Plus => BinaryOperator::Add,
+        while matches!(self.peek().tag, TokenTag::Plus | TokenTag::Minus) {
+            let op = match self.advance().tag {
+                TokenTag::Minus => BinaryOperator::Sub,
+                TokenTag::Plus => BinaryOperator::Add,
                 _ => unreachable!(),
             };
 
@@ -249,10 +249,10 @@ impl<'a> Parser<'a> {
     fn factor(&mut self) -> Result<Expr<'a>, ParseError> {
         let mut expr = self.unary()?;
 
-        while matches!(self.peek(), Token::Slash | Token::Star) {
-            let op = match self.advance() {
-                Token::Slash => BinaryOperator::Div,
-                Token::Star => BinaryOperator::Mul,
+        while matches!(self.peek().tag, TokenTag::Slash | TokenTag::Star) {
+            let op = match self.advance().tag {
+                TokenTag::Slash => BinaryOperator::Div,
+                TokenTag::Star => BinaryOperator::Mul,
                 _ => unreachable!(),
             };
 
@@ -269,10 +269,10 @@ impl<'a> Parser<'a> {
 
     /// -> ( "!" | "-" ) unary | primary ;
     fn unary(&mut self) -> Result<Expr<'a>, ParseError> {
-        if matches!(self.peek(), Token::Bang | Token::Minus) {
-            let op = match self.advance() {
-                Token::Bang => UnaryOperator::Not,
-                Token::Minus => UnaryOperator::Neg,
+        if matches!(self.peek().tag, TokenTag::Bang | TokenTag::Minus) {
+            let op = match self.advance().tag {
+                TokenTag::Bang => UnaryOperator::Not,
+                TokenTag::Minus => UnaryOperator::Neg,
                 _ => unreachable!(),
             };
 
@@ -289,16 +289,16 @@ impl<'a> Parser<'a> {
 
     /// Variable | NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
     fn primary(&mut self) -> Result<Expr<'a>, ParseError> {
-        match self.advance() {
-            Token::Number(n) => Ok(Expr::Literal(Literal::Number(n))),
-            Token::Keyword(Keyword::True) => Ok(Expr::Literal(Literal::True)),
-            Token::Keyword(Keyword::False) => Ok(Expr::Literal(Literal::False)),
-            Token::Keyword(Keyword::Nil) => Ok(Expr::Literal(Literal::Nil)),
-            Token::Identifier(ident) => Ok(Expr::Variable(ident)),
-            Token::String(s) => Ok(Expr::Literal(Literal::String(s))),
-            Token::OpenParen => {
+        match self.advance().tag {
+            TokenTag::Number(n) => Ok(Expr::Literal(Literal::Number(n))),
+            TokenTag::Keyword(Keyword::True) => Ok(Expr::Literal(Literal::True)),
+            TokenTag::Keyword(Keyword::False) => Ok(Expr::Literal(Literal::False)),
+            TokenTag::Keyword(Keyword::Nil) => Ok(Expr::Literal(Literal::Nil)),
+            TokenTag::Identifier(ident) => Ok(Expr::Variable(ident)),
+            TokenTag::String(s) => Ok(Expr::Literal(Literal::String(s))),
+            TokenTag::OpenParen => {
                 let expr = self.expression()?;
-                self.consume(&Token::CloseParen)?;
+                self.consume(&TokenTag::CloseParen)?;
 
                 Ok(Expr::Grouping(Box::new(expr)))
             }

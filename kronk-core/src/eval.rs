@@ -235,7 +235,7 @@ impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expr::WhileLoop { condition, exec } => {
-                write!(f, "while ({condition}) {{\n\t{exec}\n}}\n")
+                writeln!(f, "while ({condition}) {{\n\t{exec}\n}}")
             }
 
             Expr::Conditional {
@@ -244,20 +244,20 @@ impl Display for Expr<'_> {
                 else_branch,
             } => {
                 if let Some(elb) = else_branch {
-                    write!(
+                    writeln!(
                         f,
-                        "if ({}) {{\n\t{}\n}} else {{\n\t{}\n}}\n",
+                        "if ({}) {{\n\t{}\n}} else {{\n\t{}\n}}",
                         condition, true_branch, elb
                     )
                 } else {
-                    write!(f, "if ({}) {{\n\t{}\n}}\n", condition, true_branch)
+                    writeln!(f, "if ({}) {{\n\t{}\n}}", condition, true_branch)
                 }
             }
             Self::Block(b) => {
-                write!(f, "{{\n")?;
+                writeln!(f, "{{")?;
 
                 for expr in b {
-                    write!(f, "\t{expr}")?;
+                    writeln!(f, "\t{expr}")?;
                 }
 
                 write!(f, "}}")
