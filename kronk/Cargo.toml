@@ -6,7 +6,7 @@ description = "The Kronk interpreter - a silly, experimental language with surpr
 license = "MIT OR Apache-2.0"
 authors.workspace = true
 repository = "https://github.com/BradenEverson/kronk"
-readme = "README.md"
+readme = "../README.md"
 
 [dependencies]
 kronk-core = { version = "0.1.0", path = "../kronk-core" }
