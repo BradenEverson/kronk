@@ -300,7 +300,33 @@ where
                 '+' => TokenTag::Plus,
                 '-' => TokenTag::Minus,
                 '*' => TokenTag::Star,
-                '/' => TokenTag::Slash,
+                '/' => match peek.peek() {
+                    Some((_, '/')) => {
+                        while let Some((_, ch)) = peek.next() {
+                            if ch == '\n' {
+                                break;
+                            }
+                        }
+                        continue;
+                    }
+                    Some((_, '*')) => {
+                        peek.next();
+                        while let Some((_, ch)) = peek.next() {
+                            if ch == '*' {
+                                match peek.peek() {
+                                    Some((_, '/')) => {
+                                        peek.next();
+                                        break;
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+
+                        continue;
+                    }
+                    _ => TokenTag::Slash,
+                },
 
                 '\n' => {
                     col = 0;
@@ -452,6 +478,47 @@ mod tests {
                 TokenTag::EOF
             ]
         );
+    }
+
+    #[test]
+    fn multi_line_comment() {
+        let tokens = r#"
+    /*
+     This is a multi line comment
+     * all of this should be ignored *
+     */
+    x = 10
+            "#
+        .tokenize()
+        .expect("Tokenize");
+
+        let expected = [
+            TokenTag::Identifier("x"),
+            TokenTag::Equal,
+            TokenTag::Number(10.0),
+            TokenTag::EOF,
+        ];
+
+        assert_eq!(tags(tokens), expected)
+    }
+
+    #[test]
+    fn single_line_comment() {
+        let tokens = r#"
+// This is a comment
+    x = 10
+            "#
+        .tokenize()
+        .expect("Tokenize");
+
+        let expected = [
+            TokenTag::Identifier("x"),
+            TokenTag::Equal,
+            TokenTag::Number(10.0),
+            TokenTag::EOF,
+        ];
+
+        assert_eq!(tags(tokens), expected)
     }
 
     #[test]
