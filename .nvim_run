@@ -1,1 +1,1 @@
-cargo run -r -- samples/for.kronk
+cargo run -r -- samples/infinite.kronk
