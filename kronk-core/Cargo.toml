@@ -2,7 +2,10 @@
 name = "kronk-core"
 version = "0.1.0"
 edition = "2024"
+description = "Core components (tokenizer, parser, evaluator) for the Kronk language - a silly, experimental interpreted language"
+license = "MIT OR Apache-2.0"
 authors.workspace = true
+repository = "https://github.com/BradenEverson/kronk"
 
 [dependencies]
 
