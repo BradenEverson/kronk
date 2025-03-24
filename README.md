@@ -11,20 +11,22 @@ I don't know why I named it `Kronk`, but I did.
 - Variable assignment
 - Branching logic with `if` statements
 - Looping techniques through `while` and `for` style loops
+- `print`ing and `roar`ing
+    - Note: `roar` is a legendary and life changing keyword that will print your message to standard out more expressively than before. Instead of ending this expression in a semicolon, if must end with a bang `!`
 
 `hello.kronk`:
 ```c
 var foo = "Hello";
 var bar = " World!";
 
-print foo + bar;
+roar foo + bar!
 ```
 
 Execute using `kronk hello.kronk`:
 
 ```bash
 $ kronk samples/hello.kronk 
-Hello World!
+HELLO WORLD!!!!
 ```
 
 Or even cooler, here's some nicer looking features that Kronk supports:
