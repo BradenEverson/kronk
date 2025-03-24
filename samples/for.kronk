@@ -1,3 +1,9 @@
+/*
+ *    A for loop demonstration :D
+ */
+
+
+// A for loop follows the same style as C style languages
 for (var i = 0; i < 10; var i = i + 1) {
     print i;
 }
