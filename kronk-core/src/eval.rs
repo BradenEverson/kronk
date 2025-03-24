@@ -330,6 +330,26 @@ mod tests {
     use super::Interpretter;
 
     #[test]
+    fn for_looping() {
+        let tokens = r#"
+            var foo = 10;
+            for (var i = 0; i < 10; var i = i + 1) {
+                var foo = foo + 1;
+            }
+            "#
+        .tokenize()
+        .expect("Tokenize");
+
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut interp = Interpretter::default();
+        let val = interp.eval(ast).expect("Interpret result");
+
+        assert_eq!(val, Literal::Void)
+    }
+
+    #[test]
     fn use_variables_later() {
         let tokens = "var foo = 100;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
