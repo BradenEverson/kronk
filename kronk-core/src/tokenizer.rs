@@ -40,6 +40,10 @@ pub enum TokenTag<'a> {
     OpenParen,
     /// )
     CloseParen,
+    /// [
+    OpenBracket,
+    /// ]
+    CloseBracket,
     /// ;
     Semicolon,
     /// +
@@ -95,6 +99,8 @@ impl Display for TokenTag<'_> {
 
             Self::OpenParen => write!(f, "("),
             Self::CloseParen => write!(f, ")"),
+            Self::OpenBracket => write!(f, "["),
+            Self::CloseBracket => write!(f, "]"),
 
             Self::Plus => write!(f, "+"),
             Self::Minus => write!(f, "-"),
@@ -250,6 +256,9 @@ where
             let mut len = 1;
             col += 1;
             let next_tag = match tok {
+                '[' => TokenTag::OpenBracket,
+                ']' => TokenTag::CloseBracket,
+
                 '{' => TokenTag::OpenBrace,
                 '}' => TokenTag::CloseBrace,
 
@@ -527,6 +536,21 @@ mod tests {
             TokenTag::Identifier("x"),
             TokenTag::Equal,
             TokenTag::Number(10.0),
+            TokenTag::EOF,
+        ];
+
+        assert_eq!(tags(tokens), expected)
+    }
+
+    #[test]
+    fn brackets() {
+        let tokens = "foo[1]".tokenize().expect("Tokenize");
+
+        let expected = [
+            TokenTag::Identifier("foo"),
+            TokenTag::OpenBracket,
+            TokenTag::Number(1.0),
+            TokenTag::CloseBracket,
             TokenTag::EOF,
         ];
 

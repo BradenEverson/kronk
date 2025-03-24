@@ -532,6 +532,8 @@ pub enum Literal<'a> {
     Nil,
     /// A void return
     Void,
+    /// A list of expressions
+    List(Vec<Literal<'a>>),
 }
 
 impl Display for Literal<'_> {
@@ -544,6 +546,7 @@ impl Display for Literal<'_> {
             Self::Nil => write!(f, "nil"),
             Self::Concat(a, b) => write!(f, "{a}{b}"),
             Self::Void => write!(f, ""),
+            Self::List(vals) => write!(f, "{vals:?}"),
         }
     }
 }
