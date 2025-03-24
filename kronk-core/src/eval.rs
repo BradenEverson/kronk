@@ -299,14 +299,14 @@ mod tests {
 
     #[test]
     fn use_variables_later() {
-        let tokens = "var foo = 100".tokenize().expect("Tokenize");
+        let tokens = "var foo = 100;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
         let mut interp = Interpretter::default();
         interp.eval(ast).expect("Interpret result");
 
-        let tokens = "foo + 1".tokenize().expect("Tokenize");
+        let tokens = "foo + 1;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn simple_eval() {
-        let tokens = "var foo = 100".tokenize().expect("Tokenize");
+        let tokens = "var foo = 100;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn notting() {
-        let tokens = "!true".tokenize().expect("Tokenize");
+        let tokens = "!true;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn negation() {
-        let tokens = "-100".tokenize().expect("Tokenize");
+        let tokens = "-100;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn eval_addition() {
-        let tokens = "100 + 100".tokenize().expect("Tokenize");
+        let tokens = "100 + 100;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn eval_string_concat() {
-        let tokens = r#""100" + 100"#.tokenize().expect("Tokenize");
+        let tokens = r#""100" + 100;"#.tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn eval_string_concat_otherway() {
-        let tokens = r#"10 + "20""#.tokenize().expect("Tokenize");
+        let tokens = r#"10 + "20";"#.tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn loose_equality() {
-        let tokens = r#"1 == "1""#.tokenize().expect("Tokenize");
+        let tokens = r#"1 == "1";"#.tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -395,7 +395,7 @@ mod tests {
 
     #[test]
     fn pure_inequality() {
-        let tokens = "1 + 1 != 100 * 10".tokenize().expect("Tokenize");
+        let tokens = "1 + 1 != 100 * 10;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -405,7 +405,7 @@ mod tests {
 
     #[test]
     fn pure_equality() {
-        let tokens = "1 + 1 == 2".tokenize().expect("Tokenize");
+        let tokens = "1 + 1 == 2;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn eval_pure_string_concat() {
-        let tokens = r#""Hello " + "World!""#.tokenize().expect("Tokenize");
+        let tokens = r#""Hello " + "World!";"#.tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");

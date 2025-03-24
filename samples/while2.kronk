@@ -9,7 +9,7 @@ while (!flag) {
         print "halfway there!";
     } else {
         print i + "/50";
-    };
+    }
 
     var i = i + 1;
-};
+}

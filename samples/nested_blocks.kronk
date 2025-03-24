@@ -1,6 +1,6 @@
 {
     {
         print "Hello!";
-    };
+    }
     print "World";
-};
+}

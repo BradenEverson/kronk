@@ -4,4 +4,4 @@ if (2 == 1) {
     print "It's that";
 } else {
     print "It's none of them D:";
-};
+}

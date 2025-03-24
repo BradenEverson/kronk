@@ -70,7 +70,6 @@ impl<'a> Parser<'a> {
 
         while !self.at_end() {
             let expr = self.parse()?;
-            self.consume(&TokenTag::Semicolon)?;
             expressions.push(expr);
         }
 
@@ -85,19 +84,22 @@ impl<'a> Parser<'a> {
 
     /// A statement is either `print `expression` | `expression` ;
     fn statement(&mut self) -> Result<Expr<'a>, ParseError> {
-        // TODO, this here is where we should be expecting and
-        // consuming semicolons
         match self.peek().tag {
             TokenTag::Keyword(Keyword::Print) => {
                 self.advance();
                 let next = self.expression()?;
+                self.consume(&TokenTag::Semicolon)?;
 
                 Ok(Expr::Print(Box::new(next)))
             }
             TokenTag::OpenBrace => self.block(),
             TokenTag::Keyword(Keyword::If) => self.if_statement(),
             TokenTag::Keyword(Keyword::While) => self.while_statement(),
-            _ => self.expression(),
+            _ => {
+                let res = self.expression()?;
+                self.consume(&TokenTag::Semicolon)?;
+                Ok(res)
+            }
         }
     }
 
@@ -122,7 +124,6 @@ impl<'a> Parser<'a> {
 
         while self.peek().tag != TokenTag::CloseBrace {
             let expr = self.statement()?;
-            self.consume(&TokenTag::Semicolon)?;
             block_items.push(expr);
         }
 
@@ -437,7 +438,7 @@ mod tests {
 
     #[test]
     fn assignment() {
-        let tokens = "var foo = 100".tokenize().expect("Tokenize");
+        let tokens = "var foo = 100;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -453,7 +454,7 @@ mod tests {
 
     #[test]
     fn basic_ast_generated() {
-        let tokens = "100 + 100".tokenize().expect("Tokenize");
+        let tokens = "100 + 100;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -470,7 +471,7 @@ mod tests {
 
     #[test]
     fn while_loop_structure() {
-        let tokens = "while (true) {};".tokenize().expect("Tokenize");
+        let tokens = "while (true) {}".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -486,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_literal_number() {
-        let tokens = "42".tokenize().expect("Tokenize");
+        let tokens = "42;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -496,7 +497,7 @@ mod tests {
 
     #[test]
     fn test_literal_string() {
-        let tokens = "\"hello\"".tokenize().expect("Tokenize");
+        let tokens = "\"hello\";".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -506,7 +507,7 @@ mod tests {
 
     #[test]
     fn test_literal_true() {
-        let tokens = "true".tokenize().expect("Tokenize");
+        let tokens = "true;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -516,7 +517,7 @@ mod tests {
 
     #[test]
     fn empty_block() {
-        let tokens = "{}".tokenize().expect("Tokenize");
+        let tokens = "{};".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -529,7 +530,7 @@ mod tests {
         let tokens = r#"
             if (true) {
                 print "Hello!";
-            };
+            }
         "#
         .tokenize()
         .expect("Tokenize");
@@ -576,7 +577,7 @@ mod tests {
 
     #[test]
     fn test_literal_false() {
-        let tokens = "false".tokenize().expect("Tokenize");
+        let tokens = "false;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -586,7 +587,7 @@ mod tests {
 
     #[test]
     fn test_literal_nil() {
-        let tokens = "nil".tokenize().expect("Tokenize");
+        let tokens = "nil;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -596,7 +597,7 @@ mod tests {
 
     #[test]
     fn test_unary_negation() {
-        let tokens = "-42".tokenize().expect("Tokenize");
+        let tokens = "-42;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -612,7 +613,7 @@ mod tests {
 
     #[test]
     fn test_unary_not() {
-        let tokens = "!true".tokenize().expect("Tokenize");
+        let tokens = "!true;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -628,7 +629,7 @@ mod tests {
 
     #[test]
     fn test_binary_addition() {
-        let tokens = "100 + 200".tokenize().expect("Tokenize");
+        let tokens = "100 + 200;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -645,7 +646,7 @@ mod tests {
 
     #[test]
     fn test_binary_multiplication() {
-        let tokens = "3 * 4".tokenize().expect("Tokenize");
+        let tokens = "3 * 4;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -662,7 +663,7 @@ mod tests {
 
     #[test]
     fn test_binary_equality() {
-        let tokens = "true == false".tokenize().expect("Tokenize");
+        let tokens = "true == false;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -679,7 +680,7 @@ mod tests {
 
     #[test]
     fn test_binary_inequality() {
-        let tokens = "true != false".tokenize().expect("Tokenize");
+        let tokens = "true != false;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -696,7 +697,7 @@ mod tests {
 
     #[test]
     fn test_grouping() {
-        let tokens = "(42 + 10) * 2".tokenize().expect("Tokenize");
+        let tokens = "(42 + 10) * 2;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -717,7 +718,7 @@ mod tests {
 
     #[test]
     fn test_complex_expression() {
-        let tokens = "(3 + 5) * (10 - 2) / 4".tokenize().expect("Tokenize");
+        let tokens = "(3 + 5) * (10 - 2) / 4;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let ast = parser.parse().expect("Failed to parse");
@@ -746,7 +747,7 @@ mod tests {
 
     #[test]
     fn test_invalid_expression() {
-        let tokens = "42 +".tokenize().expect("Tokenize");
+        let tokens = "42 +;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let result = parser.parse();
@@ -756,7 +757,7 @@ mod tests {
 
     #[test]
     fn test_unexpected_token() {
-        let tokens = "+ 42".tokenize().expect("Tokenize");
+        let tokens = "+ 42;".tokenize().expect("Tokenize");
         let mut parser = Parser::with_tokens(&tokens);
 
         let result = parser.parse();

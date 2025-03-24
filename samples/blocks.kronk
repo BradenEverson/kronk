@@ -3,4 +3,4 @@
     var bar = "Hello!";
     print foo;
     print bar;
-};
+}
