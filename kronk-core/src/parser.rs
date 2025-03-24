@@ -120,6 +120,13 @@ impl<'a> Parser<'a> {
     /// A statement is either `print `expression` | `expression` | `while` | `if` | { block } | `for` ;
     fn statement(&mut self) -> Result<Expr<'a>, ParseError> {
         match self.peek().tag {
+            TokenTag::Keyword(Keyword::Roar) => {
+                self.advance();
+                let next = self.expression()?;
+                self.consume(&TokenTag::Bang)?;
+
+                Ok(Expr::Roar(Box::new(next)))
+            }
             TokenTag::Keyword(Keyword::Print) => {
                 self.advance();
                 let next = self.expression()?;
@@ -424,6 +431,8 @@ pub enum Expr<'a> {
         /// Expression Node
         node: Box<Expr<'a>>,
     },
+    /// Roar the expressions result to stdout
+    Roar(Box<Expr<'a>>),
     /// Print the expressions result to stdout
     Print(Box<Expr<'a>>),
     /// Assignment operator

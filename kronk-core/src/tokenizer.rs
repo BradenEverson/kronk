@@ -124,6 +124,7 @@ impl Display for Keyword {
             Self::Nil => write!(f, "nil"),
             Self::Or => write!(f, "or"),
             Self::Print => write!(f, "print"),
+            Self::Roar => write!(f, "roar"),
             Self::Return => write!(f, "return"),
             Self::Super => write!(f, "super"),
             Self::This => write!(f, "this"),
@@ -157,6 +158,8 @@ pub enum Keyword {
     Or,
     /// print
     Print,
+    /// Roar
+    Roar,
     /// return
     Return,
     /// super
@@ -185,6 +188,7 @@ impl TryFrom<&str> for Keyword {
             "nil" => Ok(Self::Nil),
             "or" => Ok(Self::Or),
             "print" => Ok(Self::Print),
+            "roar" => Ok(Self::Roar),
             "return" => Ok(Self::Return),
             "super" => Ok(Self::Super),
             "this" => Ok(Self::This),

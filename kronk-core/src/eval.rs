@@ -32,6 +32,13 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::Roar(expr) => {
+                let mut stringified = format!("{}", self.eval(*expr)?);
+                stringified = stringified.to_uppercase();
+                println!("{stringified}!!!");
+
+                Ok(Literal::Void)
+            }
             Expr::ForLoop {
                 init,
                 check,
@@ -249,6 +256,7 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Expr::Roar(r) => write!(f, "roar {r}!"),
             Expr::ForLoop {
                 init,
                 check,
