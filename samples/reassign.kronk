@@ -1,0 +1,5 @@
+var foo = 10;
+foo = 4;
+foo = 12;
+
+print foo;
