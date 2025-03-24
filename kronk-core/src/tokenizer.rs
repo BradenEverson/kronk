@@ -44,6 +44,10 @@ pub enum TokenTag<'a> {
     Semicolon,
     /// +
     Plus,
+    /// ++
+    PlusPlus,
+    /// +=
+    PlusEq,
     /// -
     Minus,
     /// *
@@ -78,6 +82,8 @@ pub enum TokenTag<'a> {
 impl Display for TokenTag<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
+            Self::PlusPlus => write!(f, "++"),
+            Self::PlusEq => write!(f, "+="),
             Self::Dot => write!(f, "."),
             Self::Semicolon => write!(f, ";"),
             Self::Number(n) => write!(f, "{n}"),
@@ -297,7 +303,17 @@ where
                     _ => TokenTag::Greater,
                 },
 
-                '+' => TokenTag::Plus,
+                '+' => match peek.peek() {
+                    Some((_, '+')) => {
+                        peek.next();
+                        TokenTag::PlusPlus
+                    }
+                    Some((_, '=')) => {
+                        peek.next();
+                        TokenTag::PlusEq
+                    }
+                    _ => TokenTag::Plus,
+                },
                 '-' => TokenTag::Minus,
                 '*' => TokenTag::Star,
                 '/' => match peek.peek() {
@@ -450,6 +466,24 @@ mod tests {
                 TokenTag::Number(3.14),
                 TokenTag::EOF
             ]
+        )
+    }
+
+    #[test]
+    fn plus_eq_operator() {
+        let tokens = "i+=".tokenize().expect("Tokenize");
+        assert_eq!(
+            tags(tokens),
+            [TokenTag::Identifier("i"), TokenTag::PlusEq, TokenTag::EOF]
+        )
+    }
+
+    #[test]
+    fn inc_operator() {
+        let tokens = "i++".tokenize().expect("Tokenize");
+        assert_eq!(
+            tags(tokens),
+            [TokenTag::Identifier("i"), TokenTag::PlusPlus, TokenTag::EOF]
         )
     }
 
