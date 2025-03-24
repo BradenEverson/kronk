@@ -318,7 +318,7 @@ where
                 '*' => TokenTag::Star,
                 '/' => match peek.peek() {
                     Some((_, '/')) => {
-                        while let Some((_, ch)) = peek.next() {
+                        for (_, ch) in peek.by_ref() {
                             if ch == '\n' {
                                 break;
                             }
@@ -329,12 +329,9 @@ where
                         peek.next();
                         while let Some((_, ch)) = peek.next() {
                             if ch == '*' {
-                                match peek.peek() {
-                                    Some((_, '/')) => {
-                                        peek.next();
-                                        break;
-                                    }
-                                    _ => {}
+                                if let Some((_, '/')) = peek.peek() {
+                                    peek.next();
+                                    break;
                                 }
                             }
                         }

@@ -32,6 +32,28 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::Inc(name, before) => {
+                if let Some(inc) = self.context.get_mut(name) {
+                    let prev = inc.clone();
+                    *inc = Literal::Number(inc.number()? + 1.0);
+
+                    if before { Ok(prev) } else { Ok(inc.clone()) }
+                } else {
+                    // TODO: Make this a more descriptive "variable does not exist" error
+                    Err(RuntimeError)
+                }
+            }
+            Expr::AddAssign { name, add } => {
+                let val = self.eval(*add)?;
+                if let Some(inc) = self.context.get_mut(name) {
+                    *inc = (inc.clone() + val)?;
+
+                    Ok(Literal::Void)
+                } else {
+                    // TODO: Make this a more descriptive "variable does not exist" error
+                    Err(RuntimeError)
+                }
+            }
             Expr::Reassignment { name, val } => {
                 let val = self.eval(*val)?;
                 if let Some(set) = self.context.get_mut(name) {
@@ -266,6 +288,14 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Expr::AddAssign { name, add } => write!(f, "{name} += {add}"),
+            Expr::Inc(name, before) => {
+                if *before {
+                    write!(f, "++{name}")
+                } else {
+                    write!(f, "{name}++")
+                }
+            }
             Expr::Roar(r) => write!(f, "roar {r}!"),
             Expr::ForLoop {
                 init,

@@ -72,8 +72,12 @@ impl<'a> Parser<'a> {
     }
 
     /// Peeks the current token plus some `n`
-    fn peek_n(&self, n: usize) -> Token<'a> {
-        self.tokens[self.idx + n]
+    fn peek_n(&self, n: usize) -> Option<TokenTag<'a>> {
+        if self.idx + n >= self.tokens.len() {
+            None
+        } else {
+            Some(self.tokens[self.idx + n].tag)
+        }
     }
 
     /// Consumes the current token assuming it's the provided Token, failing if not
@@ -227,41 +231,63 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// -> equality  | var ident = equality;
+    /// -> equality  | var ident = equality | ident = equality | ident++ | ident += equality
     fn expression(&mut self) -> Result<Expr<'a>, ParseError> {
-        if self.peek().tag == TokenTag::Keyword(Keyword::Var) {
-            self.advance();
-            let advance = self.advance();
-            if let TokenTag::Identifier(name) = advance.tag {
-                self.consume(&TokenTag::Equal)?;
-                let val = self.equality()?;
-                Ok(Expr::Assignment {
-                    name,
-                    val: Box::new(val),
-                })
-            } else {
-                Err(ParseError {
-                    message: format!("Expected Expression, found `{}`", advance.tag),
-                    line: advance.line,
-                    col: advance.col,
-                    len: advance.len,
-                })
+        match (self.peek().tag, self.peek_n(1)) {
+            (TokenTag::Keyword(Keyword::Var), _) => {
+                self.advance();
+                let advance = self.advance();
+                if let TokenTag::Identifier(name) = advance.tag {
+                    self.consume(&TokenTag::Equal)?;
+                    let val = self.equality()?;
+                    Ok(Expr::Assignment {
+                        name,
+                        val: Box::new(val),
+                    })
+                } else {
+                    Err(ParseError {
+                        message: format!("Expected Expression, found `{}`", advance.tag),
+                        line: advance.line,
+                        col: advance.col,
+                        len: advance.len,
+                    })
+                }
             }
-        } else if let TokenTag::Identifier(ident) = self.peek().tag {
-            if self.peek_n(1).tag == TokenTag::Equal {
+
+            (TokenTag::Identifier(name), Some(TokenTag::Equal)) => {
                 self.advance();
                 self.advance();
                 let assignment = self.equality()?;
 
                 Ok(Expr::Reassignment {
-                    name: ident,
+                    name,
                     val: Box::new(assignment),
                 })
-            } else {
-                self.equality()
             }
-        } else {
-            self.equality()
+
+            (TokenTag::Identifier(name), Some(TokenTag::PlusEq)) => {
+                self.advance();
+                self.advance();
+                let add = Box::new(self.equality()?);
+
+                Ok(Expr::AddAssign { name, add })
+            }
+
+            (TokenTag::Identifier(ident), Some(TokenTag::PlusPlus)) => {
+                self.advance();
+                self.advance();
+
+                Ok(Expr::Inc(ident, true))
+            }
+
+            (TokenTag::PlusPlus, Some(TokenTag::Identifier(ident))) => {
+                self.advance();
+                self.advance();
+
+                Ok(Expr::Inc(ident, false))
+            }
+
+            _ => self.equality(),
         }
     }
 
@@ -459,6 +485,15 @@ pub enum Expr<'a> {
         name: &'a str,
         /// The variable value
         val: Box<Expr<'a>>,
+    },
+    /// Increment a variable, true if return before and false if return after inc
+    Inc(&'a str, bool),
+    /// Add a value to a variable
+    AddAssign {
+        /// Name of the variable
+        name: &'a str,
+        /// What is added to the existing variable
+        add: Box<Expr<'a>>,
     },
     /// Assignment operator
     Assignment {

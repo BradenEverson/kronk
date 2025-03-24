@@ -1,1 +1,1 @@
-cargo run -r -- samples/reassign.kronk
+cargo run -r -- samples/for.kronk

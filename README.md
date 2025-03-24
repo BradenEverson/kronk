@@ -9,6 +9,8 @@ I don't know why I named it `Kronk`, but I did.
 - Literals including Number, String, Bool and Nil
 - Basic arithmetic expressions with implicit type conversion (yippee)
 - Variable assignment
+- Variable reassignment, add assignment and incrementing (both ++{var} and {var}++)
+- Comment ignoring :O
 - Branching logic with `if` statements
 - Looping techniques through `while` and `for` style loops
 - `print`ing and `roar`ing
