@@ -32,6 +32,16 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::Reassignment { name, val } => {
+                let val = self.eval(*val)?;
+                if let Some(set) = self.context.get_mut(name) {
+                    *set = val;
+                    Ok(Literal::Void)
+                } else {
+                    // TODO: Make this a more descriptive "variable does not exist" error
+                    Err(RuntimeError)
+                }
+            }
             Expr::Roar(expr) => {
                 let mut stringified = format!("{}", self.eval(*expr)?);
                 stringified = stringified.to_uppercase();
@@ -296,7 +306,8 @@ impl Display for Expr<'_> {
             }
             Self::Variable(v) => write!(f, "{v}"),
             Self::Print(node) => write!(f, "print {node}"),
-            Self::Assignment { name, val } => write!(f, "{name} = {val}"),
+            Self::Assignment { name, val } => write!(f, "var {name} = {val}"),
+            Self::Reassignment { name, val } => write!(f, "{name} = {val}"),
             Self::Literal(l) => write!(f, "{l}"),
             Self::Unary { op, node } => match op {
                 UnaryOperator::Neg => write!(f, "-{node}"),

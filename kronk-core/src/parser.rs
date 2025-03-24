@@ -71,6 +71,11 @@ impl<'a> Parser<'a> {
         self.tokens[self.idx - 1]
     }
 
+    /// Peeks the current token plus some `n`
+    fn peek_n(&self, n: usize) -> Token<'a> {
+        self.tokens[self.idx + n]
+    }
+
     /// Consumes the current token assuming it's the provided Token, failing if not
     fn consume(&mut self, token: &TokenTag<'_>) -> Result<(), ParseError> {
         if &self.peek().tag == token {
@@ -241,6 +246,19 @@ impl<'a> Parser<'a> {
                     col: advance.col,
                     len: advance.len,
                 })
+            }
+        } else if let TokenTag::Identifier(ident) = self.peek().tag {
+            if self.peek_n(1).tag == TokenTag::Equal {
+                self.advance();
+                self.advance();
+                let assignment = self.equality()?;
+
+                Ok(Expr::Reassignment {
+                    name: ident,
+                    val: Box::new(assignment),
+                })
+            } else {
+                self.equality()
             }
         } else {
             self.equality()
@@ -435,6 +453,13 @@ pub enum Expr<'a> {
     Roar(Box<Expr<'a>>),
     /// Print the expressions result to stdout
     Print(Box<Expr<'a>>),
+    /// Assignment operator for an existing variable, fails if variable does not exist
+    Reassignment {
+        /// The variable name
+        name: &'a str,
+        /// The variable value
+        val: Box<Expr<'a>>,
+    },
     /// Assignment operator
     Assignment {
         /// The variable name
