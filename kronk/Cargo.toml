@@ -2,10 +2,14 @@
 name = "kronk"
 version = "0.1.0"
 edition = "2024"
+description = "The Kronk interpreter - a silly, experimental language with surprisingly loud output"
+license = "MIT OR Apache-2.0"
 authors.workspace = true
+repository = "https://github.com/BradenEverson/kronk"
+readme = "README.md"
 
 [dependencies]
-kronk-core = {path = "../kronk-core"}
+kronk-core = { path = "../kronk-core" }
 
 [lints]
 workspace = true
