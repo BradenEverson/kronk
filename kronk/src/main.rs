@@ -4,7 +4,7 @@ use std::{env, fs::File, io::Read, process};
 
 use kronk_core::{
     eval::Interpretter,
-    parser::Parser,
+    parser::{ParseError, Parser},
     tokenizer::{TokenError, Tokenizable},
 };
 
@@ -77,7 +77,20 @@ fn run_file(file_path: &str) {
     let ast = match parser.parse_many() {
         Ok(ast) => ast,
         Err(err) => {
-            eprintln!("Error parsing: {}", err);
+            let ParseError {
+                message,
+                len,
+                col,
+                line,
+            } = err;
+
+            eprintln!("parser error: {}", message);
+            eprintln!(" -> {}:{}:{} ", file_path, line, col);
+            if let Some(line) = buf.lines().nth(line - 1) {
+                println!(" | {line}");
+                println!(" | {}{}", " ".repeat(col - len), "~".repeat(len));
+            }
+
             process::exit(1);
         }
     };

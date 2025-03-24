@@ -13,12 +13,41 @@ pub struct Parser<'a> {
 }
 
 /// An error that occurs whilst parsing
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub struct ParseError;
+#[derive(Clone, PartialEq, Debug, Default)]
+pub struct ParseError {
+    /// The error message
+    pub message: String,
+    /// Line of the error
+    pub line: usize,
+    /// Column of the error
+    pub col: usize,
+    /// Length of the error
+    pub len: usize,
+}
+
+impl From<(TokenTag<'_>, Token<'_>)> for ParseError {
+    fn from(value: (TokenTag<'_>, Token<'_>)) -> Self {
+        let (
+            want,
+            Token {
+                line,
+                col,
+                len,
+                tag,
+            },
+        ) = value;
+        Self {
+            message: format!("Expected `{want}` after `{tag}`"),
+            line,
+            col,
+            len,
+        }
+    }
+}
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Error parsing :(")
+        write!(f, "parser error: {}", self.message)
     }
 }
 
@@ -36,13 +65,19 @@ impl<'a> Parser<'a> {
         self.tokens[self.idx]
     }
 
+    /// Peeks at the previous token, does not advance the index
+    #[inline]
+    fn peek_back(&self) -> Token<'a> {
+        self.tokens[self.idx - 1]
+    }
+
     /// Consumes the current token assuming it's the provided Token, failing if not
     fn consume(&mut self, token: &TokenTag<'_>) -> Result<(), ParseError> {
         if &self.peek().tag == token {
             self.idx += 1;
             Ok(())
         } else {
-            Err(ParseError)
+            Err((*token, self.peek_back()).into())
         }
     }
 
@@ -159,7 +194,8 @@ impl<'a> Parser<'a> {
     fn expression(&mut self) -> Result<Expr<'a>, ParseError> {
         if self.peek().tag == TokenTag::Keyword(Keyword::Var) {
             self.advance();
-            if let TokenTag::Identifier(name) = self.advance().tag {
+            let advance = self.advance();
+            if let TokenTag::Identifier(name) = advance.tag {
                 self.consume(&TokenTag::Equal)?;
                 let val = self.equality()?;
                 Ok(Expr::Assignment {
@@ -167,7 +203,12 @@ impl<'a> Parser<'a> {
                     val: Box::new(val),
                 })
             } else {
-                Err(ParseError)
+                Err(ParseError {
+                    message: format!("Expected Expression, found `{}`", advance.tag),
+                    line: advance.line,
+                    col: advance.col,
+                    len: advance.len,
+                })
             }
         } else {
             self.equality()
@@ -290,7 +331,8 @@ impl<'a> Parser<'a> {
 
     /// Variable | NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
     fn primary(&mut self) -> Result<Expr<'a>, ParseError> {
-        match self.advance().tag {
+        let advance = self.advance();
+        match advance.tag {
             TokenTag::Number(n) => Ok(Expr::Literal(Literal::Number(n))),
             TokenTag::Keyword(Keyword::True) => Ok(Expr::Literal(Literal::True)),
             TokenTag::Keyword(Keyword::False) => Ok(Expr::Literal(Literal::False)),
@@ -303,7 +345,12 @@ impl<'a> Parser<'a> {
 
                 Ok(Expr::Grouping(Box::new(expr)))
             }
-            _ => Err(ParseError),
+            _ => Err(ParseError {
+                message: format!("Unexpected token: `{}`", advance.tag),
+                line: advance.line,
+                col: advance.col,
+                len: advance.len,
+            }),
         }
     }
 }
