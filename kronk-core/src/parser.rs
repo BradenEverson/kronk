@@ -117,7 +117,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    /// A statement is either `print `expression` | `expression` ;
+    /// A statement is either `print `expression` | `expression` | `while` | `if` | { block } | `for` ;
     fn statement(&mut self) -> Result<Expr<'a>, ParseError> {
         match self.peek().tag {
             TokenTag::Keyword(Keyword::Print) => {
@@ -128,6 +128,7 @@ impl<'a> Parser<'a> {
                 Ok(Expr::Print(Box::new(next)))
             }
             TokenTag::OpenBrace => self.block(),
+            TokenTag::Keyword(Keyword::For) => self.for_statement(),
             TokenTag::Keyword(Keyword::If) => self.if_statement(),
             TokenTag::Keyword(Keyword::While) => self.while_statement(),
             _ => {
@@ -150,6 +151,30 @@ impl<'a> Parser<'a> {
         let exec = Box::new(self.statement()?);
 
         Ok(Expr::WhileLoop { condition, exec })
+    }
+
+    /// A for loop is `for (`expression`, `equality`, `expression`) `expression``
+    fn for_statement(&mut self) -> Result<Expr<'a>, ParseError> {
+        self.consume(&TokenTag::Keyword(Keyword::For))?;
+        self.consume(&TokenTag::OpenParen)?;
+
+        let init = Box::new(self.expression()?);
+        self.consume(&TokenTag::Semicolon)?;
+
+        let check = Box::new(self.equality()?);
+        self.consume(&TokenTag::Semicolon)?;
+
+        let update = Box::new(self.expression()?);
+        self.consume(&TokenTag::CloseParen)?;
+
+        let exec = Box::new(self.statement()?);
+
+        Ok(Expr::ForLoop {
+            init,
+            check,
+            update,
+            exec,
+        })
     }
 
     /// A block is `{ (expression)* }`
@@ -358,6 +383,18 @@ impl<'a> Parser<'a> {
 /// An expression node in the AST
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr<'a> {
+    /// A for style loop that performs some initialization and repeatedly checks a certain equality
+    /// statement until it is true
+    ForLoop {
+        /// Loop initialization
+        init: Box<Expr<'a>>,
+        /// What is checked on each run
+        check: Box<Expr<'a>>,
+        /// What is run to update
+        update: Box<Expr<'a>>,
+        /// What is executed upon each iteration
+        exec: Box<Expr<'a>>,
+    },
     /// A while style loop that will repeat until the inner condition is false
     WhileLoop {
         /// Condition being checked

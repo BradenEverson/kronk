@@ -32,6 +32,21 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::ForLoop {
+                init,
+                check,
+                update,
+                exec,
+            } => {
+                self.eval(*init)?;
+                while self.eval(*check.clone())?.bool()? {
+                    self.eval(*exec.clone())?;
+                    self.eval(*update.clone())?;
+                }
+
+                Ok(Literal::Void)
+            }
+
             Expr::WhileLoop { condition, exec } => {
                 while self.eval(*condition.clone())?.bool()? {
                     self.eval(*exec.clone())?;
@@ -234,6 +249,15 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Expr::ForLoop {
+                init,
+                check,
+                update,
+                exec,
+            } => {
+                writeln!(f, "for ({init}; {check}; {update}) {exec}")
+            }
+
             Expr::WhileLoop { condition, exec } => {
                 writeln!(f, "while ({condition}) {{\n\t{exec}\n}}")
             }
