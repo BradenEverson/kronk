@@ -13,7 +13,7 @@ I don't know why I named it `Kronk`, but I did.
 - Looping techniques through `while` and `for` style loops
 
 `hello.kronk`:
-```
+```c
 var foo = "Hello";
 var bar = " World!";
 
@@ -29,7 +29,7 @@ Hello World!
 
 Or even cooler, here's some nicer looking features that Kronk supports:
 
-```
+```c
 var flag = false;
 
 for (var i = 1; !flag; var i = i + 1) {
@@ -48,14 +48,14 @@ for (var i = 1; !flag; var i = i + 1) {
 Kronk has support for tokenization and parser errors, they give helpful insight on what may be wrong in a program with syntax you don't know and docs that don't exist:
 
 ### Token Error
-```
+```c
 var foo = 1;
 
 
 this is all valid but $ is not
 ```
 Running the `kronk` interpretter over this will give us the error:
-```
+```c
 token error: Unrecognized token: `$`
  -> samples/invalid_tokens.kronk:4:23 
  | this is all valid but $ is not
@@ -63,14 +63,14 @@ token error: Unrecognized token: `$`
 ```
 
 ### Parser Error
-```
+```c
 while (var foo = false) {
     print "This file is super wrong"
 };
 ```
 
 Running `kronk` here will give us:
-```
+```c
 parser error: Unexpected token: `var`
  -> samples/invalid_parser.kronk:1:10 
  | while (var foo = false) {
@@ -79,7 +79,7 @@ parser error: Unexpected token: `var`
 
 Fixing that error gives:
 
-```
+```c
 parser error: Expected `;` after `This file is super wrong`
  -> samples/invalid_parser.kronk:2:35 
  |     print "This file is super wrong"
@@ -88,7 +88,7 @@ parser error: Expected `;` after `This file is super wrong`
 
 And fixing that one gives:
 
-```
+```c
 parser error: Unexpected token: `;`
  -> samples/invalid_parser.kronk:3:2 
  | };
