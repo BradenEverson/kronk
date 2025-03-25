@@ -7,6 +7,7 @@ I don't know why I named it `Kronk`, but I did.
 ## Current Features
 `Kronk` currently supports:
 - Literals including Number, String, Bool and Nil
+- List literals with indexing :D
 - Basic arithmetic expressions with implicit type conversion (yippee)
 - Variable assignment
 - Variable reassignment, add assignment and incrementing (both ++{var} and {var}++)
@@ -36,7 +37,7 @@ Or even cooler, here's some nicer looking features that Kronk supports:
 ```c
 var flag = false;
 
-for (var i = 1; !flag; var i = i + 1) {
+for (var i = 1; !flag; i++) {
     if (i == 50) {
         print "done!";
         var flag = true;
