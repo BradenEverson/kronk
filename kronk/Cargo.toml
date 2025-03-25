@@ -1,6 +1,6 @@
 [package]
 name = "kronk"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "The Kronk interpreter - a silly, experimental language with surprisingly loud output"
 license = "MIT OR Apache-2.0"
@@ -9,7 +9,7 @@ repository = "https://github.com/BradenEverson/kronk"
 readme = "../README.md"
 
 [dependencies]
-kronk-core = { version = "0.1.0", path = "../kronk-core" }
+kronk-core = { version = "0.1.1", path = "../kronk-core" }
 
 [lints]
 workspace = true
