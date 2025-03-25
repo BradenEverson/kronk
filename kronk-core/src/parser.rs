@@ -408,27 +408,42 @@ impl<'a> Parser<'a> {
     /// Variable | NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
     fn primary(&mut self) -> Result<Expr<'a>, ParseError> {
         let advance = self.advance();
-        match advance.tag {
-            TokenTag::Number(n) => Ok(Expr::Literal(Literal::Number(n))),
-            TokenTag::Keyword(Keyword::True) => Ok(Expr::Literal(Literal::True)),
-            TokenTag::Keyword(Keyword::False) => Ok(Expr::Literal(Literal::False)),
-            TokenTag::Keyword(Keyword::Nil) => Ok(Expr::Literal(Literal::Nil)),
-            TokenTag::Identifier(ident) => Ok(Expr::Variable(ident)),
-            TokenTag::String(s) => Ok(Expr::Literal(Literal::String(s))),
-            TokenTag::OpenBracket => self.list(),
+        let mut prim = match advance.tag {
+            TokenTag::Number(n) => Expr::Literal(Literal::Number(n)),
+            TokenTag::Keyword(Keyword::True) => Expr::Literal(Literal::True),
+            TokenTag::Keyword(Keyword::False) => Expr::Literal(Literal::False),
+            TokenTag::Keyword(Keyword::Nil) => Expr::Literal(Literal::Nil),
+            TokenTag::Identifier(ident) => Expr::Variable(ident),
+            TokenTag::String(s) => Expr::Literal(Literal::String(s)),
+            TokenTag::OpenBracket => self.list()?,
             TokenTag::OpenParen => {
                 let expr = self.expression()?;
                 self.consume(&TokenTag::CloseParen)?;
 
-                Ok(Expr::Grouping(Box::new(expr)))
+                Expr::Grouping(Box::new(expr))
             }
-            _ => Err(ParseError {
-                message: format!("Unexpected token: `{}`", advance.tag),
-                line: advance.line,
-                col: advance.col,
-                len: advance.len,
-            }),
+            _ => {
+                return Err(ParseError {
+                    message: format!("Unexpected token: `{}`", advance.tag),
+                    line: advance.line,
+                    col: advance.col,
+                    len: advance.len,
+                });
+            }
+        };
+
+        if self.peek().tag == TokenTag::OpenBracket {
+            // Attempted literal indexing
+            self.advance();
+            let index = Box::new(self.primary()?);
+            self.consume(&TokenTag::CloseBracket)?;
+            prim = Expr::Index {
+                item: Box::new(prim),
+                index,
+            };
         }
+
+        Ok(prim)
     }
 
     /// A list is `[(primary)*]`
@@ -451,6 +466,13 @@ impl<'a> Parser<'a> {
 /// An expression node in the AST
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr<'a> {
+    /// Indexing into a literal
+    Index {
+        /// The item we're indexing in
+        item: Box<Expr<'a>>,
+        /// The index into that item
+        index: Box<Expr<'a>>,
+    },
     /// A for style loop that performs some initialization and repeatedly checks a certain equality
     /// statement until it is true
     ForLoop {

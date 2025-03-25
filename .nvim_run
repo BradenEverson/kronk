@@ -1,1 +1,1 @@
-cargo run -r -- samples/list.kronk
+cargo run -r -- samples/list_loop.kronk

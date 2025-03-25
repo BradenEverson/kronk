@@ -1,0 +1,6 @@
+
+var items = ["Hello", 10, true];
+
+for (var i = 0; i < 3; i++) {
+    roar items[i]!
+}

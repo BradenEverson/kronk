@@ -32,6 +32,16 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::Index { item, index } => {
+                let idx = self.eval(*index)?.uint()?;
+                let item = self.eval(*item)?;
+
+                match item {
+                    Literal::String(s) => Ok(Literal::String(&s[idx..=idx])),
+                    Literal::List(l) => Ok(l[idx].clone()),
+                    _ => Err(RuntimeError),
+                }
+            }
             Expr::List(items) => {
                 let mut literals = vec![];
 
@@ -242,6 +252,14 @@ impl From<bool> for Literal<'_> {
 }
 
 impl<'a> Literal<'a> {
+    /// Returns the inner literal if it's a proper unsigned integer truly, asserting a runtime
+    /// error if not
+    pub fn uint(&self) -> Result<usize, RuntimeError> {
+        match self {
+            Self::Number(n) if *n >= 0.0 && n.round() == *n => Ok(*n as usize),
+            _ => Err(RuntimeError),
+        }
+    }
     /// Returns the inner literal if it's numeric, asserting a runtime error if not
     pub fn number(&self) -> Result<f64, RuntimeError> {
         match self {
@@ -297,6 +315,7 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Expr::Index { item, index } => write!(f, "{item}[{index}]"),
             Expr::List(items) => write!(f, "{items:?}"),
             Expr::AddAssign { name, add } => write!(f, "{name} += {add}"),
             Expr::Inc(name, before) => {
