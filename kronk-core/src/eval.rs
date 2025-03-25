@@ -406,17 +406,22 @@ mod tests {
             for (var i = 0; i < 10; var i = i + 1) {
                 var foo = foo + 1;
             }
+            foo;
             "#
         .tokenize()
         .expect("Tokenize");
 
         let mut parser = Parser::with_tokens(&tokens);
 
-        let ast = parser.parse().expect("Failed to parse");
+        let ast = parser.parse_many().expect("Failed to parse");
         let mut interp = Interpretter::default();
-        let val = interp.eval(ast).expect("Interpret result");
 
-        assert_eq!(val, Literal::Void)
+        let mut val = None;
+        for expr in ast {
+            val = Some(interp.eval(expr).expect("Interpret result"));
+        }
+
+        assert_eq!(val.unwrap(), Literal::Number(20.0))
     }
 
     #[test]
