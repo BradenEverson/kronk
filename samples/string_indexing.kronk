@@ -1,0 +1,6 @@
+var foo = "Strings can also be indexed :O";
+
+for (var i = 0; i < 30; i++) {
+    print foo[i];
+}
+
