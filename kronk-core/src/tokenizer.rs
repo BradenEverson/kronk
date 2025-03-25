@@ -887,4 +887,260 @@ x = x + $;
             ]
         );
     }
+
+    #[test]
+    fn test_token_display() {
+        let token = TokenTag::PlusPlus;
+        assert_eq!(format!("{}", token), "++");
+
+        let token = TokenTag::PlusEq;
+        assert_eq!(format!("{}", token), "+=");
+
+        let token = TokenTag::Dot;
+        assert_eq!(format!("{}", token), ".");
+
+        let token = TokenTag::Semicolon;
+        assert_eq!(format!("{}", token), ";");
+
+        let token = TokenTag::Number(3.14);
+        assert_eq!(format!("{}", token), "3.14");
+
+        let token = TokenTag::String("hello");
+        assert_eq!(format!("{}", token), "hello");
+
+        let token = TokenTag::Identifier("foo");
+        assert_eq!(format!("{}", token), "foo");
+
+        let token = TokenTag::Keyword(Keyword::Var);
+        assert_eq!(format!("{}", token), "var");
+
+        let token = TokenTag::OpenBrace;
+        assert_eq!(format!("{}", token), "{");
+
+        let token = TokenTag::CloseBrace;
+        assert_eq!(format!("{}", token), "}");
+
+        let token = TokenTag::OpenParen;
+        assert_eq!(format!("{}", token), "(");
+
+        let token = TokenTag::CloseParen;
+        assert_eq!(format!("{}", token), ")");
+
+        let token = TokenTag::OpenBracket;
+        assert_eq!(format!("{}", token), "[");
+
+        let token = TokenTag::CloseBracket;
+        assert_eq!(format!("{}", token), "]");
+
+        let token = TokenTag::Plus;
+        assert_eq!(format!("{}", token), "+");
+
+        let token = TokenTag::Minus;
+        assert_eq!(format!("{}", token), "-");
+
+        let token = TokenTag::Slash;
+        assert_eq!(format!("{}", token), "/");
+
+        let token = TokenTag::Star;
+        assert_eq!(format!("{}", token), "*");
+
+        let token = TokenTag::Greater;
+        assert_eq!(format!("{}", token), ">");
+
+        let token = TokenTag::GreaterEqual;
+        assert_eq!(format!("{}", token), ">=");
+
+        let token = TokenTag::Less;
+        assert_eq!(format!("{}", token), "<");
+
+        let token = TokenTag::LessEqual;
+        assert_eq!(format!("{}", token), "<=");
+
+        let token = TokenTag::Bang;
+        assert_eq!(format!("{}", token), "!");
+
+        let token = TokenTag::BangEqual;
+        assert_eq!(format!("{}", token), "!=");
+
+        let token = TokenTag::Equal;
+        assert_eq!(format!("{}", token), "=");
+
+        let token = TokenTag::EqualEqual;
+        assert_eq!(format!("{}", token), "==");
+
+        let token = TokenTag::Comma;
+        assert_eq!(format!("{}", token), ",");
+
+        let token = TokenTag::EOF;
+        assert_eq!(format!("{}", token), " ");
+    }
+
+    #[test]
+    fn test_keyword_display() {
+        assert_eq!(format!("{}", Keyword::And), "and");
+        assert_eq!(format!("{}", Keyword::Class), "class");
+        assert_eq!(format!("{}", Keyword::Else), "else");
+        assert_eq!(format!("{}", Keyword::False), "false");
+        assert_eq!(format!("{}", Keyword::Fun), "fun");
+        assert_eq!(format!("{}", Keyword::For), "for");
+        assert_eq!(format!("{}", Keyword::If), "if");
+        assert_eq!(format!("{}", Keyword::Nil), "nil");
+        assert_eq!(format!("{}", Keyword::Or), "or");
+        assert_eq!(format!("{}", Keyword::Print), "print");
+        assert_eq!(format!("{}", Keyword::Roar), "roar");
+        assert_eq!(format!("{}", Keyword::Return), "return");
+        assert_eq!(format!("{}", Keyword::Super), "super");
+        assert_eq!(format!("{}", Keyword::This), "this");
+        assert_eq!(format!("{}", Keyword::True), "true");
+        assert_eq!(format!("{}", Keyword::Var), "var");
+        assert_eq!(format!("{}", Keyword::While), "while");
+    }
+
+    #[test]
+    fn test_keyword_try_from() {
+        assert_eq!(Keyword::try_from("and"), Ok(Keyword::And));
+        assert_eq!(Keyword::try_from("class"), Ok(Keyword::Class));
+        assert_eq!(Keyword::try_from("else"), Ok(Keyword::Else));
+        assert_eq!(Keyword::try_from("false"), Ok(Keyword::False));
+        assert_eq!(Keyword::try_from("fun"), Ok(Keyword::Fun));
+        assert_eq!(Keyword::try_from("for"), Ok(Keyword::For));
+        assert_eq!(Keyword::try_from("if"), Ok(Keyword::If));
+        assert_eq!(Keyword::try_from("nil"), Ok(Keyword::Nil));
+        assert_eq!(Keyword::try_from("or"), Ok(Keyword::Or));
+        assert_eq!(Keyword::try_from("print"), Ok(Keyword::Print));
+        assert_eq!(Keyword::try_from("roar"), Ok(Keyword::Roar));
+        assert_eq!(Keyword::try_from("return"), Ok(Keyword::Return));
+        assert_eq!(Keyword::try_from("super"), Ok(Keyword::Super));
+        assert_eq!(Keyword::try_from("this"), Ok(Keyword::This));
+        assert_eq!(Keyword::try_from("true"), Ok(Keyword::True));
+        assert_eq!(Keyword::try_from("var"), Ok(Keyword::Var));
+        assert_eq!(Keyword::try_from("while"), Ok(Keyword::While));
+        assert_eq!(Keyword::try_from("unknown"), Err(()));
+    }
+
+    #[test]
+    fn test_token_error_display() {
+        let err = TokenError::new('@', 5, 10);
+        assert_eq!(format!("{}", err), "Invalid token @ at line 5, col 10");
+    }
+
+    #[test]
+    fn test_token_struct() {
+        let token = Token {
+            line: 1,
+            col: 5,
+            len: 3,
+            tag: TokenTag::Identifier("foo"),
+        };
+        assert_eq!(token.line, 1);
+        assert_eq!(token.col, 5);
+        assert_eq!(token.len, 3);
+        assert_eq!(token.tag, TokenTag::Identifier("foo"));
+    }
+
+    #[test]
+    fn test_complex_expression() {
+        let input = "if (x >= 10) { print(\"Hello\"); } else { print(\"World\"); }";
+        let tokens = input.tokenize().expect("Tokenize");
+        assert_eq!(
+            tags(tokens),
+            [
+                TokenTag::Keyword(Keyword::If),
+                TokenTag::OpenParen,
+                TokenTag::Identifier("x"),
+                TokenTag::GreaterEqual,
+                TokenTag::Number(10.0),
+                TokenTag::CloseParen,
+                TokenTag::OpenBrace,
+                TokenTag::Keyword(Keyword::Print),
+                TokenTag::OpenParen,
+                TokenTag::String("Hello"),
+                TokenTag::CloseParen,
+                TokenTag::Semicolon,
+                TokenTag::CloseBrace,
+                TokenTag::Keyword(Keyword::Else),
+                TokenTag::OpenBrace,
+                TokenTag::Keyword(Keyword::Print),
+                TokenTag::OpenParen,
+                TokenTag::String("World"),
+                TokenTag::CloseParen,
+                TokenTag::Semicolon,
+                TokenTag::CloseBrace,
+                TokenTag::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn test_all_keywords() {
+        let input =
+            "and class else false fun for if nil or print roar return super this true var while";
+        let tokens = input.tokenize().expect("Tokenize");
+        assert_eq!(
+            tags(tokens),
+            [
+                TokenTag::Keyword(Keyword::And),
+                TokenTag::Keyword(Keyword::Class),
+                TokenTag::Keyword(Keyword::Else),
+                TokenTag::Keyword(Keyword::False),
+                TokenTag::Keyword(Keyword::Fun),
+                TokenTag::Keyword(Keyword::For),
+                TokenTag::Keyword(Keyword::If),
+                TokenTag::Keyword(Keyword::Nil),
+                TokenTag::Keyword(Keyword::Or),
+                TokenTag::Keyword(Keyword::Print),
+                TokenTag::Keyword(Keyword::Roar),
+                TokenTag::Keyword(Keyword::Return),
+                TokenTag::Keyword(Keyword::Super),
+                TokenTag::Keyword(Keyword::This),
+                TokenTag::Keyword(Keyword::True),
+                TokenTag::Keyword(Keyword::Var),
+                TokenTag::Keyword(Keyword::While),
+                TokenTag::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn test_all_operators() {
+        let input = "+ ++ += - * / = > >= < <= == != ! , . ; ( ) [ ] { }";
+        let tokens = input.tokenize().expect("Tokenize");
+        assert_eq!(
+            tags(tokens),
+            [
+                TokenTag::Plus,
+                TokenTag::PlusPlus,
+                TokenTag::PlusEq,
+                TokenTag::Minus,
+                TokenTag::Star,
+                TokenTag::Slash,
+                TokenTag::Equal,
+                TokenTag::Greater,
+                TokenTag::GreaterEqual,
+                TokenTag::Less,
+                TokenTag::LessEqual,
+                TokenTag::EqualEqual,
+                TokenTag::BangEqual,
+                TokenTag::Bang,
+                TokenTag::Comma,
+                TokenTag::Dot,
+                TokenTag::Semicolon,
+                TokenTag::OpenParen,
+                TokenTag::CloseParen,
+                TokenTag::OpenBracket,
+                TokenTag::CloseBracket,
+                TokenTag::OpenBrace,
+                TokenTag::CloseBrace,
+                TokenTag::EOF
+            ]
+        );
+    }
+
+    #[test]
+    fn test_token_error_new() {
+        let err = TokenError::new('#', 3, 7);
+        assert_eq!(err.token, '#');
+        assert_eq!(err.line, 3);
+        assert_eq!(err.col, 7);
+    }
 }
