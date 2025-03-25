@@ -1,4 +1,4 @@
-//! Main interpretter REPL runtime for Kronk programs
+//! Main interpretter runtime for Kronk programs
 
 use std::{env, fs::File, io::Read, process};
 
