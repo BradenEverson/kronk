@@ -1,1 +1,1 @@
-cargo run -r -- samples/string_indexing.kronk
+cargo run -r -- examples/string_indexing.kronk
