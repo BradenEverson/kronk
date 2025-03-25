@@ -432,7 +432,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        if self.peek().tag == TokenTag::OpenBracket {
+        while self.peek().tag == TokenTag::OpenBracket {
             // Attempted literal indexing
             self.advance();
             let index = Box::new(self.primary()?);

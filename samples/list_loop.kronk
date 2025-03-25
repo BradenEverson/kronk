@@ -1,5 +1,5 @@
 
-var items = ["Hello", 10, true];
+var items = ["Hello", [1,2,3,4], true];
 
 for (var i = 0; i < 3; i++) {
     roar items[i]!

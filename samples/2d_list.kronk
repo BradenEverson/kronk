@@ -1,0 +1,12 @@
+var items = 
+    [
+        ["Hello", "This", "Is"],
+        ["A", "3x3", "Array"],
+        ["Pretty", "Cool", ":)"]
+    ];
+
+for (var y = 0; y < 3; y++) {
+    for (var x = 0; x < 3; x++) {
+        print items[y][x];
+    }
+}
