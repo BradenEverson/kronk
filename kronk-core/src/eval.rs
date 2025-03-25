@@ -32,6 +32,15 @@ impl<'a> Interpretter<'a> {
     /// Interprets an AST
     pub fn eval(&mut self, ast: Expr<'a>) -> Result<Literal<'a>, RuntimeError> {
         match ast {
+            Expr::List(items) => {
+                let mut literals = vec![];
+
+                for item in items {
+                    literals.push(self.eval(item)?);
+                }
+
+                Ok(Literal::List(literals))
+            }
             Expr::Inc(name, before) => {
                 if let Some(inc) = self.context.get_mut(name) {
                     let prev = inc.clone();
@@ -288,6 +297,7 @@ impl<'a> Literal<'a> {
 impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Expr::List(items) => write!(f, "{items:?}"),
             Expr::AddAssign { name, add } => write!(f, "{name} += {add}"),
             Expr::Inc(name, before) => {
                 if *before {
@@ -494,6 +504,23 @@ mod tests {
         let ast = parser.parse().expect("Failed to parse");
         let mut eval = Interpretter::default();
         assert_eq!(eval.eval(ast).expect("Eval"), Literal::True)
+    }
+
+    #[test]
+    fn list() {
+        let tokens = r#"[12 == 1, 10 * 10, "hi"];"#.tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+        let mut eval = Interpretter::default();
+        assert_eq!(
+            eval.eval(ast).expect("Eval"),
+            Literal::List(vec![
+                Literal::False,
+                Literal::Number(100.0),
+                Literal::String("hi")
+            ])
+        )
     }
 
     #[test]

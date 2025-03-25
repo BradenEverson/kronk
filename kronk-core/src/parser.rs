@@ -415,6 +415,7 @@ impl<'a> Parser<'a> {
             TokenTag::Keyword(Keyword::Nil) => Ok(Expr::Literal(Literal::Nil)),
             TokenTag::Identifier(ident) => Ok(Expr::Variable(ident)),
             TokenTag::String(s) => Ok(Expr::Literal(Literal::String(s))),
+            TokenTag::OpenBracket => self.list(),
             TokenTag::OpenParen => {
                 let expr = self.expression()?;
                 self.consume(&TokenTag::CloseParen)?;
@@ -428,6 +429,22 @@ impl<'a> Parser<'a> {
                 len: advance.len,
             }),
         }
+    }
+
+    /// A list is `[(primary)*]`
+    fn list(&mut self) -> Result<Expr<'a>, ParseError> {
+        let mut items = vec![];
+
+        while self.peek().tag != TokenTag::CloseBracket {
+            items.push(self.equality()?);
+            if self.peek().tag != TokenTag::CloseBracket {
+                self.consume(&TokenTag::Comma)?;
+            }
+        }
+
+        self.consume(&TokenTag::CloseBracket)?;
+
+        Ok(Expr::List(items))
     }
 }
 
@@ -466,6 +483,8 @@ pub enum Expr<'a> {
     Block(Vec<Expr<'a>>),
     /// A literal
     Literal(Literal<'a>),
+    /// A list of expressions that boils down to a list of literals
+    List(Vec<Expr<'a>>),
     /// A variable
     Variable(&'a str),
     /// Unary operation
@@ -639,6 +658,52 @@ mod tests {
                 exec: Box::new(Expr::Block(vec![]))
             }
         )
+    }
+
+    #[test]
+    fn list_with_expressions() {
+        let tokens = "[false, 2 + 4];".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::List(vec![
+                Expr::Literal(Literal::False),
+                Expr::Binary {
+                    op: BinaryOperator::Add,
+                    left: Box::new(Expr::Literal(Literal::Number(2.0))),
+                    right: Box::new(Expr::Literal(Literal::Number(4.0)))
+                }
+            ])
+        );
+    }
+
+    #[test]
+    fn list() {
+        let tokens = "[1, 2.4];".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(
+            ast,
+            Expr::List(vec![
+                Expr::Literal(Literal::Number(1.0)),
+                Expr::Literal(Literal::Number(2.4))
+            ])
+        );
+    }
+
+    #[test]
+    fn simple_list_construction() {
+        let tokens = "[];".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+
+        let ast = parser.parse().expect("Failed to parse");
+
+        assert_eq!(ast, Expr::List(vec![]));
     }
 
     #[test]

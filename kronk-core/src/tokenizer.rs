@@ -356,6 +356,8 @@ where
                     continue;
                 }
 
+                ',' => TokenTag::Comma,
+
                 ws if ws.is_whitespace() => continue,
 
                 num if num.is_numeric() => {
