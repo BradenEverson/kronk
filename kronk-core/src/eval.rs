@@ -208,6 +208,21 @@ impl Add for Literal<'_> {
                 Box::new(Literal::String(s1)),
                 Box::new(Literal::Number(n2)),
             )),
+
+            (Self::List(l1), Self::List(l2)) => {
+                let mut l = l1.clone();
+                l.extend(l2);
+
+                Ok(Literal::List(l))
+            }
+
+            (Self::List(l1), other) => {
+                let mut l = l1.clone();
+                l.push(other);
+
+                Ok(Literal::List(l))
+            }
+
             _ => Err(RuntimeError),
         }
     }
