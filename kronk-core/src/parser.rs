@@ -85,8 +85,10 @@ impl<'a> Parser<'a> {
         if &self.peek().tag == token {
             self.idx += 1;
             Ok(())
-        } else {
+        } else if self.idx != 0 {
             Err((*token, self.peek_back()).into())
+        } else {
+            Err((*token, self.peek()).into())
         }
     }
 
@@ -629,8 +631,8 @@ pub enum BinaryOperator {
 #[cfg(test)]
 mod tests {
     use crate::{
-        parser::{BinaryOperator, Expr, Literal, Parser, UnaryOperator},
-        tokenizer::Tokenizable,
+        parser::{BinaryOperator, Expr, Literal, ParseError, Parser, UnaryOperator},
+        tokenizer::{Token, TokenTag, Tokenizable},
     };
 
     #[test]
@@ -1016,5 +1018,464 @@ mod tests {
         let result = parser.parse();
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parser_construction() {
+        let tokens = vec![Token {
+            line: 1,
+            col: 1,
+            len: 1,
+            tag: TokenTag::EOF,
+        }];
+        let parser = Parser::with_tokens(&tokens);
+        assert_eq!(parser.tokens.len(), 1);
+        assert_eq!(parser.idx, 0);
+    }
+
+    #[test]
+    fn test_peek_back() {
+        let tokens = vec![
+            Token {
+                line: 1,
+                col: 1,
+                len: 1,
+                tag: TokenTag::Number(1.0),
+            },
+            Token {
+                line: 1,
+                col: 3,
+                len: 1,
+                tag: TokenTag::EOF,
+            },
+        ];
+        let mut parser = Parser::with_tokens(&tokens);
+        parser.advance();
+        assert_eq!(parser.peek_back().tag, TokenTag::Number(1.0));
+    }
+
+    #[test]
+    fn test_peek_n() {
+        let tokens = vec![
+            Token {
+                line: 1,
+                col: 1,
+                len: 1,
+                tag: TokenTag::Number(1.0),
+            },
+            Token {
+                line: 1,
+                col: 3,
+                len: 1,
+                tag: TokenTag::Plus,
+            },
+            Token {
+                line: 1,
+                col: 5,
+                len: 1,
+                tag: TokenTag::Number(2.0),
+            },
+            Token {
+                line: 1,
+                col: 7,
+                len: 1,
+                tag: TokenTag::EOF,
+            },
+        ];
+        let parser = Parser::with_tokens(&tokens);
+        assert_eq!(parser.peek_n(1), Some(TokenTag::Plus));
+        assert_eq!(parser.peek_n(2), Some(TokenTag::Number(2.0)));
+        assert_eq!(parser.peek_n(3), Some(TokenTag::EOF));
+        assert_eq!(parser.peek_n(4), None);
+    }
+
+    #[test]
+    fn test_consume_success() {
+        let tokens = vec![
+            Token {
+                line: 1,
+                col: 1,
+                len: 1,
+                tag: TokenTag::Number(1.0),
+            },
+            Token {
+                line: 1,
+                col: 3,
+                len: 1,
+                tag: TokenTag::EOF,
+            },
+        ];
+        let mut parser = Parser::with_tokens(&tokens);
+        assert!(parser.consume(&TokenTag::Number(1.0)).is_ok());
+        assert_eq!(parser.idx, 1);
+    }
+
+    #[test]
+    fn test_consume_failure() {
+        let tokens = vec![
+            Token {
+                line: 1,
+                col: 1,
+                len: 1,
+                tag: TokenTag::Number(1.0),
+            },
+            Token {
+                line: 1,
+                col: 3,
+                len: 1,
+                tag: TokenTag::EOF,
+            },
+        ];
+        let mut parser = Parser::with_tokens(&tokens);
+        let result = parser.consume(&TokenTag::Plus);
+        assert!(result.is_err());
+        assert_eq!(parser.idx, 0);
+    }
+
+    #[test]
+    fn test_at_end() {
+        let tokens = vec![Token {
+            line: 1,
+            col: 1,
+            len: 1,
+            tag: TokenTag::EOF,
+        }];
+        let parser = Parser::with_tokens(&tokens);
+        assert!(parser.at_end());
+    }
+
+    #[test]
+    fn test_advance() {
+        let tokens = vec![
+            Token {
+                line: 1,
+                col: 1,
+                len: 1,
+                tag: TokenTag::Number(1.0),
+            },
+            Token {
+                line: 1,
+                col: 3,
+                len: 1,
+                tag: TokenTag::EOF,
+            },
+        ];
+        let mut parser = Parser::with_tokens(&tokens);
+        let tok = parser.advance();
+        assert_eq!(tok.tag, TokenTag::Number(1.0));
+        assert_eq!(parser.idx, 1);
+    }
+
+    #[test]
+    fn test_parse_many() {
+        let tokens = "1; 2; 3;".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let exprs = parser.parse_many().expect("Parse");
+        assert_eq!(exprs.len(), 3);
+        assert_eq!(exprs[0], Expr::Literal(Literal::Number(1.0)));
+        assert_eq!(exprs[1], Expr::Literal(Literal::Number(2.0)));
+        assert_eq!(exprs[2], Expr::Literal(Literal::Number(3.0)));
+    }
+
+    #[test]
+    fn test_roar_statement() {
+        let tokens = "roar 42!".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert_eq!(
+            expr,
+            Expr::Roar(Box::new(Expr::Literal(Literal::Number(42.0))))
+        );
+    }
+
+    #[test]
+    fn test_print_statement() {
+        let tokens = "print 42;".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert_eq!(
+            expr,
+            Expr::Print(Box::new(Expr::Literal(Literal::Number(42.0))))
+        );
+    }
+
+    #[test]
+    fn test_for_loop() {
+        let tokens = "for (var i = 0; i < 10; i = i + 1) { print i; }"
+            .tokenize()
+            .expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert!(matches!(expr, Expr::ForLoop { .. }));
+    }
+
+    #[test]
+    fn test_if_else_statement() {
+        let tokens = "if (true) { 1; } else { 2; }".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert!(matches!(expr, Expr::Conditional { .. }));
+    }
+
+    #[test]
+    fn test_reassignment() {
+        let tokens = "x = 42;".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert_eq!(
+            expr,
+            Expr::Reassignment {
+                name: "x",
+                val: Box::new(Expr::Literal(Literal::Number(42.0)))
+            }
+        );
+    }
+
+    #[test]
+    fn test_add_assign() {
+        let tokens = "x += 42;".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert_eq!(
+            expr,
+            Expr::AddAssign {
+                name: "x",
+                add: Box::new(Expr::Literal(Literal::Number(42.0)))
+            }
+        );
+    }
+
+    #[test]
+    fn test_post_increment() {
+        let tokens = "x++;".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert_eq!(expr, Expr::Inc("x", true));
+    }
+
+    #[test]
+    fn test_pre_increment() {
+        let tokens = "++x;".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert_eq!(expr, Expr::Inc("x", false));
+    }
+
+    #[test]
+    fn test_indexing() {
+        let tokens = "list[0];".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert_eq!(
+            expr,
+            Expr::Index {
+                item: Box::new(Expr::Variable("list")),
+                index: Box::new(Expr::Literal(Literal::Number(0.0)))
+            }
+        );
+    }
+
+    #[test]
+    fn test_nested_indexing() {
+        let tokens = "list[0][1];".tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let expr = parser.parse().expect("Parse");
+        assert!(matches!(expr, Expr::Index { .. }));
+    }
+
+    #[test]
+    fn test_parse_error_display() {
+        let err = ParseError {
+            message: "test error".to_string(),
+            line: 1,
+            col: 1,
+            len: 1,
+        };
+        assert_eq!(format!("{}", err), "parser error: test error");
+    }
+
+    #[test]
+    fn test_parse_error_from_token() {
+        let token = Token {
+            line: 1,
+            col: 1,
+            len: 1,
+            tag: TokenTag::Number(1.0),
+        };
+        let err: ParseError = (TokenTag::Plus, token).into();
+        assert_eq!(err.message, "Expected `+` after `1`");
+        assert_eq!(err.line, 1);
+        assert_eq!(err.col, 1);
+        assert_eq!(err.len, 1);
+    }
+
+    #[test]
+    fn test_comparison_operators() {
+        let tests = [
+            ("1 > 2;", BinaryOperator::Gt),
+            ("1 >= 2;", BinaryOperator::Gte),
+            ("1 < 2;", BinaryOperator::Lt),
+            ("1 <= 2;", BinaryOperator::Lte),
+        ];
+
+        for (input, op) in tests {
+            let tokens = input.tokenize().expect("Tokenize");
+            let mut parser = Parser::with_tokens(&tokens);
+            let expr = parser.parse().expect("Parse");
+            assert!(matches!(
+                expr,
+                Expr::Binary {
+                    op: test_op,
+                    left: _,
+                    right: _
+                } if test_op == op
+            ));
+        }
+    }
+
+    #[test]
+    fn test_term_operators() {
+        let tests = [
+            ("1 + 2;", BinaryOperator::Add),
+            ("1 - 2;", BinaryOperator::Sub),
+        ];
+
+        for (input, op) in tests {
+            let tokens = input.tokenize().expect("Tokenize");
+            let mut parser = Parser::with_tokens(&tokens);
+            let expr = parser.parse().expect("Parse");
+            assert!(matches!(
+                expr,
+                Expr::Binary {
+                    op: test_op,
+                    left: _,
+                    right: _
+                } if test_op == op
+            ));
+        }
+    }
+
+    #[test]
+    fn test_factor_operators() {
+        let tests = [
+            ("1 * 2;", BinaryOperator::Mul),
+            ("1 / 2;", BinaryOperator::Div),
+        ];
+
+        for (input, op) in tests {
+            let tokens = input.tokenize().expect("Tokenize");
+            let mut parser = Parser::with_tokens(&tokens);
+            let expr = parser.parse().expect("Parse");
+            assert!(matches!(
+                expr,
+                Expr::Binary {
+                    op: test_op,
+                    left: _,
+                    right: _
+                } if test_op == op
+            ));
+        }
+    }
+
+    #[test]
+    fn test_unary_operators() {
+        let tests = [("-1;", UnaryOperator::Neg), ("!true;", UnaryOperator::Not)];
+
+        for (input, op) in tests {
+            let tokens = input.tokenize().expect("Tokenize");
+            let mut parser = Parser::with_tokens(&tokens);
+            let expr = parser.parse().expect("Parse");
+            assert!(matches!(
+                expr,
+                Expr::Unary {
+                    op: test_op,
+                    node: _
+                } if test_op == op
+            ));
+        }
+    }
+
+    #[test]
+    fn test_literal_display() {
+        let tests = [
+            (Literal::Number(3.14), "3.14"),
+            (Literal::String("hello"), "hello"),
+            (Literal::True, "true"),
+            (Literal::False, "false"),
+            (Literal::Nil, "nil"),
+            (
+                Literal::Concat(
+                    Box::new(Literal::String("hello")),
+                    Box::new(Literal::String("world")),
+                ),
+                "helloworld",
+            ),
+            (Literal::Void, ""),
+        ];
+
+        for (lit, expected) in tests {
+            assert_eq!(format!("{}", lit), expected);
+        }
+    }
+
+    #[test]
+    fn test_list_literal_display() {
+        let lit = Literal::List(vec![
+            Literal::Number(1.0),
+            Literal::Number(2.0),
+            Literal::Number(3.0),
+        ]);
+        let s = format!("{}", lit);
+        assert!(s.contains("1.0"));
+        assert!(s.contains("2.0"));
+        assert!(s.contains("3.0"));
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let tests = [
+            ("var = 1;", "Expected Expression, found `=`"),
+            ("1 +", "Unexpected token: `+`"),
+            ("if (true { }", "Expected `)` after `true`"),
+            ("[1, 2", "Expected `,` after `2`"),
+            ("++", "Unexpected token: `++`"),
+        ];
+
+        for (input, expected_msg) in tests {
+            let tokens = input.tokenize().expect("Tokenize");
+            let mut parser = Parser::with_tokens(&tokens);
+            let result = parser.parse();
+            assert!(result.is_err());
+            assert_eq!(result.unwrap_err().message, expected_msg);
+        }
+    }
+
+    #[test]
+    fn test_complex_nested_expressions() {
+        let input = r#"
+        {
+            var x = 10;
+            var y = 20;
+            var sum = x + y;
+            if (sum > 20) {
+                print "Sum is greater than 20";
+            } else {
+                print "Sum is 20 or less";
+            }
+            for (var i = 0; i < 10; i = i + 1) {
+                print i;
+            }
+            while (x > 0) {
+                x = x - 1;
+            }
+        }
+        "#;
+
+        let tokens = input.tokenize().expect("Tokenize");
+        let mut parser = Parser::with_tokens(&tokens);
+        let result = parser.parse();
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        assert!(matches!(expr, Expr::Block(_)));
     }
 }
